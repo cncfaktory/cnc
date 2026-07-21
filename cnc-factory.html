@@ -1,0 +1,2921 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>CNC Fabrika // Yönetim Simülasyonu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CNC Fabrika">
+<meta name="theme-color" content="#15181c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root{
+  --bg:#15181c;
+  --bg-2:#1c2126;
+  --panel:#20262c;
+  --panel-2:#262d34;
+  --line:#333c44;
+  --line-soft:#2a3138;
+  --steel:#4a5560;
+  --text:#e7e6e1;
+  --text-dim:#8b939c;
+  --amber:#f0a030;
+  --amber-dim:#8a5f1e;
+  --green:#4fbf82;
+  --red:#e35d52;
+  --blue:#5aa3d0;
+  --grid-tile:#1a2025;
+  --grid-tile-alt:#1d2429;
+  --font-display:'Oswald',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font-mono);overflow:hidden;}
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+#app{display:flex;flex-direction:column;height:100vh;width:100vw;}
+
+#topbar{
+  display:flex;align-items:center;gap:24px;
+  padding:10px 18px;background:var(--panel);
+  border-bottom:2px solid var(--amber-dim);
+  flex-shrink:0;
+}
+#topbar .brand{
+  font-family:var(--font-display);font-weight:700;letter-spacing:.08em;
+  font-size:18px;color:var(--amber);text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;
+}
+#topbar .brand small{font-family:var(--font-mono);color:var(--text-dim);font-weight:400;font-size:11px;letter-spacing:0;text-transform:none;}
+.stat{display:flex;flex-direction:column;gap:1px;min-width:70px;}
+.stat .label{font-size:9px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;}
+.stat .value{font-size:15px;font-weight:700;}
+.stat.money .value{color:var(--green);}
+.stat.steel .value{color:var(--blue);}
+#topbar .spacer{flex:1;}
+#topbar button.save-btn{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);
+  font-family:var(--font-mono);font-size:11px;padding:7px 12px;border-radius:3px;cursor:pointer;
+  letter-spacing:.05em;
+}
+#topbar button.save-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+.quick-buy-wrap{display:flex;flex-direction:column;gap:2px;}
+.quick-buy-title{font-size:9px;letter-spacing:.1em;color:var(--text-dim);text-transform:uppercase;}
+.quick-buy-group{display:flex;gap:4px;}
+.quick-buy-btn{
+  display:flex;flex-direction:column;align-items:center;line-height:1.15;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--blue);
+  font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 9px;border-radius:3px;cursor:pointer;
+}
+.quick-buy-btn small{color:var(--text-dim);font-size:9px;font-weight:400;}
+.quick-buy-btn:hover{border-color:var(--blue);background:#20303c;}
+.quick-buy-btn:disabled{opacity:.4;cursor:not-allowed;}
+.quick-buy-btn:disabled:hover{border-color:var(--line);background:var(--panel-2);}
+
+#main{flex:1;display:flex;min-height:0;}
+
+#floor-wrap{
+  flex:1;position:relative;overflow:hidden;
+  background:
+    linear-gradient(var(--grid-tile-alt) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-tile-alt) 1px, transparent 1px);
+  background-size:64px 64px;
+  background-color:var(--grid-tile);
+}
+#floor{display:block;width:100%;height:100%;cursor:grab;touch-action:none;}
+#floor:active{cursor:grabbing;}
+
+#site-tabs{position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 24px);}
+.site-tab{
+  background:rgba(32,38,43,0.92);border:1px solid var(--line);color:var(--text-dim);
+  font-family:var(--font-mono);font-size:11px;padding:7px 12px;border-radius:4px;cursor:pointer;
+  backdrop-filter:blur(2px);
+}
+.site-tab:hover{border-color:var(--steel);}
+.site-tab.active{border-color:var(--amber);color:var(--amber);background:rgba(43,38,32,0.92);}
+.site-tab.add{color:var(--green);border-style:dashed;}
+.site-tab.add:disabled{opacity:.4;cursor:not-allowed;}
+
+#view-controls{position:absolute;bottom:12px;right:12px;z-index:10;display:flex;flex-direction:column;gap:5px;}
+#view-controls button{
+  width:32px;height:32px;background:rgba(32,38,43,0.92);border:1px solid var(--line);color:var(--text);
+  font-family:var(--font-mono);font-size:14px;border-radius:4px;cursor:pointer;backdrop-filter:blur(2px);
+}
+#view-controls button:hover{border-color:var(--amber);color:var(--amber);}
+
+#sidebar{
+  width:340px;flex-shrink:0;background:var(--panel);
+  border-left:1px solid var(--line);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+}
+.side-section{border-bottom:1px solid var(--line-soft);padding:14px 16px;}
+.side-section h2{
+  font-family:var(--font-display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-dim);margin:0 0 10px 0;font-weight:600;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.side-section h2 .tag{color:var(--amber);font-family:var(--font-mono);font-size:10px;}
+
+/* Shop items */
+.shop-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;margin-bottom:6px;border-radius:4px;
+  background:var(--panel-2);border:1px solid var(--line-soft);cursor:pointer;
+  transition:border-color .12s;
+}
+.shop-item:hover{border-color:var(--steel);}
+.shop-item.selected{border-color:var(--amber);background:#2b2620;}
+.shop-item.disabled{opacity:.4;cursor:not-allowed;}
+.shop-item .swatch{width:26px;height:26px;border-radius:3px;flex-shrink:0;}
+.shop-item .info{flex:1;min-width:0;}
+.shop-item .info .name{font-family:var(--font-display);font-size:13px;font-weight:500;color:var(--text);}
+.shop-item .info .desc{font-size:10px;color:var(--text-dim);}
+.shop-item .price{font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;}
+.shop-group-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--steel);margin:10px 0 5px 0;}
+.shop-group-label:first-child{margin-top:0;}
+
+/* Inventory */
+.inv-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px dashed var(--line-soft);gap:8px;}
+.bulk-sell-btn{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--green);
+  font-family:var(--font-mono);font-size:10px;padding:4px 8px;border-radius:3px;cursor:pointer;white-space:nowrap;
+}
+.bulk-sell-btn:hover{border-color:var(--green);}
+.bulk-sell-btn:disabled{opacity:.35;cursor:not-allowed;}
+.inv-row:last-child{border-bottom:none;}
+.inv-row .part-name{display:flex;align-items:center;gap:8px;}
+.inv-row .dot{width:9px;height:9px;border-radius:2px;}
+.inv-row .qty{font-weight:700;}
+.buy-steel-row{display:flex;gap:6px;margin-top:8px;}
+.buy-steel-row button{
+  flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--blue);
+  font-family:var(--font-mono);font-size:11px;padding:6px 4px;border-radius:3px;cursor:pointer;
+}
+.buy-steel-row button:hover{border-color:var(--blue);}
+
+/* Orders */
+.order-card{
+  background:var(--panel-2);border:1px solid var(--line-soft);border-radius:4px;
+  padding:9px 10px;margin-bottom:8px;
+}
+.order-card .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.order-card .client{font-family:var(--font-display);font-size:12px;color:var(--amber);letter-spacing:.03em;}
+.order-card .reward{font-size:12px;color:var(--green);font-weight:700;}
+.order-card .req{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+.order-card .timerbar{height:4px;background:var(--line-soft);border-radius:2px;overflow:hidden;margin-bottom:7px;}
+.order-card .timerbar .fill{height:100%;background:var(--blue);transition:width .2s linear;}
+.order-card button{
+  width:100%;background:var(--amber-dim);border:none;color:#1a1400;font-weight:700;
+  font-family:var(--font-mono);font-size:11px;padding:6px;border-radius:3px;cursor:pointer;
+}
+.order-card button:disabled{background:var(--line-soft);color:var(--text-dim);cursor:not-allowed;}
+.order-card button:not(:disabled):hover{background:var(--amber);}
+.empty-note{font-size:11px;color:var(--text-dim);font-style:italic;padding:6px 0;}
+
+/* Selected machine inspector */
+#inspector{padding:14px 16px;}
+#inspector .none{color:var(--text-dim);font-size:12px;font-style:italic;}
+.insp-title{font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--amber);margin-bottom:8px;}
+.insp-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--text-dim);}
+.insp-row b{color:var(--text);}
+.insp-progress{height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;margin:8px 0;}
+.insp-progress .fill{height:100%;background:var(--green);transition:width .1s linear;}
+.insp-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:6px;margin-top:10px;}
+.insp-actions button{
+  font-family:var(--font-mono);font-size:11px;padding:7px 4px;border-radius:3px;cursor:pointer;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--text);
+}
+.insp-actions button.upgrade{color:var(--green);}
+.insp-actions button.upgrade:hover{border-color:var(--green);}
+.insp-actions button.repair{color:var(--amber);}
+.insp-actions button.repair:hover{border-color:var(--amber);}
+.insp-actions button.move{color:var(--blue);}
+.insp-actions button.move:hover{border-color:var(--blue);}
+.insp-actions button.sell{color:var(--red);}
+.insp-actions button.sell:hover{border-color:var(--red);}
+.insp-actions button:disabled{opacity:.35;cursor:not-allowed;}
+.insp-wear{height:6px;background:var(--line-soft);border-radius:3px;overflow:hidden;margin:4px 0 8px 0;}
+.insp-wear .fill{height:100%;transition:width .2s linear;}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  background:var(--panel-2);border:1px solid var(--amber);color:var(--text);
+  padding:9px 18px;border-radius:4px;font-size:12px;opacity:0;pointer-events:none;
+  transition:opacity .25s, transform .25s;z-index:50;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+/* Placement ghost cursor hint */
+#floor.placing{cursor:crosshair;}
+#floor.moving{cursor:move;}
+
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-track{background:var(--bg-2);}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px;}
+
+/* Modals — shared centered backdrop, used by build/inventory/stats panels */
+.modal-backdrop{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(10,12,14,0.72);
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-backdrop.hidden{display:none;}
+.modal-panel{
+  background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  padding:18px 20px;width:660px;max-width:92vw;max-height:88vh;overflow-y:auto;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.modal-header h2{
+  font-family:var(--font-display);font-size:16px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--amber);margin:0;font-weight:600;
+}
+.modal-header button{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);
+  width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:13px;
+}
+.modal-header button:hover{border-color:var(--red);color:var(--red);}
+#stats-canvas{width:100%;height:240px;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:4px;}
+#stats-legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 14px 0;}
+#stats-summary{border-top:1px solid var(--line-soft);padding-top:10px;}
+#expenses-summary{border-top:1px solid var(--line-soft);padding-top:10px;margin-top:10px;}
+.expense-group-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin:10px 0 4px 0;}
+.expense-group-label:first-child{margin-top:0;}
+.expense-total-row{display:flex;justify-content:space-between;padding:8px 0 2px 0;margin-top:6px;border-top:1px solid var(--line-soft);font-weight:700;font-size:13px;}
+
+/* Tech tree */
+.tech-tier{margin-bottom:16px;}
+.tech-tier-label{font-family:var(--font-display);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--steel);margin-bottom:8px;}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+.tech-card{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:5px;padding:11px 12px;}
+.tech-card.unlocked{border-color:var(--green);background:#1c2b22;}
+.tech-card.locked-req{opacity:.55;}
+.tech-card .tech-name{font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.tech-card .tech-desc{font-size:11px;color:var(--text-dim);line-height:1.4;margin-bottom:8px;}
+.tech-card .tech-req{font-size:10px;color:var(--amber);margin-bottom:8px;}
+.tech-card button{
+  width:100%;font-family:var(--font-mono);font-size:11px;padding:7px;border-radius:3px;cursor:pointer;
+  background:var(--amber-dim);border:none;color:#1a1400;font-weight:700;
+}
+.tech-card button:disabled{background:var(--line-soft);color:var(--text-dim);cursor:not-allowed;}
+.tech-card button:not(:disabled):hover{background:var(--amber);}
+.tech-card .unlocked-badge{font-size:10px;color:var(--green);font-weight:700;}
+
+/* Offline catch-up overlay + welcome-back summary */
+.offline-spinner{
+  width:44px;height:44px;margin:0 auto;border-radius:50%;
+  border:3px solid var(--line-soft);border-top-color:var(--amber);
+  animation:offline-spin 0.9s linear infinite;
+}
+@keyframes offline-spin{to{transform:rotate(360deg);}}
+.welcome-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line-soft);}
+.welcome-row:last-child{border-bottom:none;}
+.welcome-row .label{color:var(--text-dim);}
+.welcome-row .val{font-weight:700;}
+.welcome-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;}
+
+/* ============================================================
+   RESPONSIVE / MOBILE — stacks the floor above a scrollable sidebar,
+   compacts the topbar into two rows, and enlarges tap targets.
+   ============================================================ */
+@media (max-width: 860px){
+  #topbar{
+    flex-wrap:wrap;gap:8px 12px;padding:8px 10px;
+    row-gap:8px;
+  }
+  #topbar .brand{font-size:15px;width:100%;order:-1;}
+  #topbar .brand small{display:none;}
+  .stat{min-width:0;}
+  .stat .label{font-size:8px;}
+  .stat .value{font-size:13px;}
+  #topbar .spacer{flex-basis:0;flex-grow:0;width:0;display:none;}
+  #topbar button.save-btn{padding:8px 10px;font-size:11px;}
+  .quick-buy-group{gap:3px;}
+  .quick-buy-btn{padding:6px 7px;font-size:10px;}
+
+  #main{flex-direction:column;}
+  #floor-wrap{flex:none;height:46vh;min-height:260px;}
+  #sidebar{
+    width:100%;border-left:none;border-top:1px solid var(--line);
+    flex:1;min-height:0;
+  }
+  #site-tabs{top:8px;left:8px;}
+  .site-tab{padding:8px 10px;font-size:12px;}
+  #view-controls{bottom:8px;right:8px;}
+  #view-controls button{width:38px;height:38px;font-size:16px;}
+
+  .modal-panel{width:94vw;padding:14px 14px;max-height:85vh;}
+  .tech-grid{grid-template-columns:1fr;}
+  .insp-actions{grid-template-columns:1fr 1fr;}
+
+  /* Larger tap targets throughout — mouse-hover states don't apply on touch,
+     so buttons need to be comfortably sized instead. */
+  .shop-item{padding:10px 12px;}
+  .order-card button, .insp-actions button, .tech-card button{padding:10px 4px;font-size:12px;}
+  .bulk-sell-btn{padding:7px 10px;}
+}
+@media (max-width: 480px){
+  #topbar{gap:6px 8px;}
+  .stat{min-width:56px;}
+  #site-tabs{max-width:calc(100% - 90px);} /* leave room so it doesn't collide with zoom controls */
+  .quick-buy-btn{padding:5px 6px;font-size:9px;}
+  .quick-buy-btn small{font-size:8px;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <div class="brand">⚙ <span data-i18n="appTitle">CNC FABRİKA</span> <small data-i18n="appSubtitle">v0.1 — yönetim simülasyonu</small></div>
+    <button class="save-btn" id="btn-toggle-build">🏗️ <span data-i18n="btnBuild">İnşa Et</span></button>
+    <button class="save-btn" id="btn-toggle-inventory">📦 <span data-i18n="btnInventory">Envanter</span></button>
+    <div class="stat money"><span class="label" data-i18n="labelCash">Nakit</span><span class="value" id="stat-money">$0</span></div>
+    <div class="stat steel"><span class="label" data-i18n="labelSteel">Çelik Stoku</span><span class="value" id="stat-steel">0</span></div>
+    <div class="quick-buy-wrap">
+      <div class="quick-buy-title" data-i18n="steelBuyTitle">Çelik Al</div>
+      <div class="quick-buy-group">
+        <button class="quick-buy-btn" data-buy="10">+10<small></small></button>
+        <button class="quick-buy-btn" data-buy="50">+50<small></small></button>
+        <button class="quick-buy-btn" data-buy="200">+200<small></small></button>
+      </div>
+    </div>
+    <div class="stat"><span class="label" data-i18n="labelDay">Gün</span><span class="value" id="stat-day">1</span></div>
+    <div class="stat"><span class="label" data-i18n="labelClock">Saat</span><span class="value" id="stat-clock">00:00</span></div>
+    <div class="stat"><span class="label" data-i18n="labelShift">Vardiya</span><span class="value" id="stat-shift">☀️ Gündüz</span></div>
+    <div class="spacer"></div>
+    <button class="save-btn" id="btn-lang">🌐 EN</button>
+    <button class="save-btn" id="btn-stats">📊 <span data-i18n="btnStats">İstatistik</span></button>
+    <button class="save-btn" id="btn-tech">🔬 <span data-i18n="btnTech">Ar-Ge</span></button>
+    <button class="save-btn" id="btn-save">💾 <span data-i18n="btnSave">Kaydet</span></button>
+  </div>
+
+  <div id="build-modal" class="modal-backdrop hidden">
+    <div class="modal-panel" style="width:380px;">
+      <div class="modal-header">
+        <h2 data-i18n="sectionBuild">İnşa Et</h2>
+        <button id="btn-build-close">✕</button>
+      </div>
+      <div class="tag" id="shop-hint" style="display:inline-block;margin-bottom:10px;" data-i18n="pickHint">seçip zemine tıkla</div>
+      <div id="shop-list"></div>
+    </div>
+  </div>
+
+  <div id="inventory-modal" class="modal-backdrop hidden">
+    <div class="modal-panel" style="width:380px;">
+      <div class="modal-header">
+        <h2 data-i18n="sectionInventory">Envanter</h2>
+        <button id="btn-inventory-close">✕</button>
+      </div>
+      <div id="inventory-list"></div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:8px;" data-i18n="invSteelNote">Çelik alımı artık üst çubuktan yapılabilir.</div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="floor-wrap">
+      <div id="site-tabs"></div>
+      <canvas id="floor"></canvas>
+      <div id="view-controls">
+        <button id="btn-zoom-in" title="Yakınlaştır">+</button>
+        <button id="btn-zoom-out" title="Uzaklaştır">−</button>
+        <button id="btn-zoom-reset" title="Görünümü sıfırla">⤢</button>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="side-section">
+        <h2><span data-i18n="sectionSite">Saha</span> <span class="tag" id="site-size-tag"></span></h2>
+        <div id="site-info" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;"></div>
+        <button id="btn-expand" class="save-btn" style="width:100%;color:var(--amber);border-color:var(--amber-dim);" data-i18n="expandSite">Sahayı Genişlet</button>
+      </div>
+
+      <div class="side-section">
+        <h2><span data-i18n="sectionQuota">Günlük Hedef</span> <span class="tag" id="quota-tag"></span></h2>
+        <div class="insp-wear" style="margin-bottom:12px;"><div class="fill" id="quota-fill"></div></div>
+        <div class="inv-row"><span data-i18n="reputation">İtibar</span><span class="qty" id="reputation-value"></span></div>
+        <div class="insp-wear" style="margin:4px 0 8px 0;"><div class="fill" id="reputation-fill"></div></div>
+        <div id="prestige-note" style="font-size:10px;color:var(--text-dim);line-height:1.5;"></div>
+      </div>
+
+      <div class="side-section" style="flex-shrink:0;">
+        <h2><span data-i18n="sectionOrders">Siparişler</span> <span class="tag" id="orders-tag"></span></h2>
+        <div id="orders-list"></div>
+      </div>
+
+      <div class="side-section" id="inspector-section">
+        <h2 data-i18n="sectionSelected">Seçili Bina</h2>
+        <div id="inspector"><div class="none" data-i18n="noneSelected">Bir binaya tıkla</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="stats-modal" class="modal-backdrop hidden">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2 data-i18n="statsTitle">Üretim İstatistikleri</h2>
+      <button id="btn-stats-close">✕</button>
+    </div>
+    <canvas id="stats-canvas" width="620" height="240"></canvas>
+    <div id="stats-legend"></div>
+    <div id="stats-summary"></div>
+    <div id="expenses-summary"></div>
+  </div>
+</div>
+
+<div id="tech-modal" class="modal-backdrop hidden">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2 data-i18n="techTitle">Ar-Ge Ağacı</h2>
+      <button id="btn-tech-close">✕</button>
+    </div>
+    <div id="tech-tiers"></div>
+  </div>
+</div>
+
+<div id="offline-overlay" class="modal-backdrop hidden" style="z-index:200;">
+  <div style="text-align:center;">
+    <div class="offline-spinner"></div>
+    <div style="font-family:var(--font-display);font-size:15px;color:var(--amber);margin-top:18px;" data-i18n="offlineLoadingTitle">Fabrika ilerlemeni hesaplıyor…</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:6px;" data-i18n="offlineLoadingBody">Yokken üretim devam etti, bir saniye sürebilir.</div>
+  </div>
+</div>
+
+<div id="welcome-modal" class="modal-backdrop hidden">
+  <div class="modal-panel" style="width:420px;">
+    <div class="modal-header">
+      <h2 data-i18n="welcomeBackTitle">Tekrar Hoş Geldin!</h2>
+      <button id="btn-welcome-close">✕</button>
+    </div>
+    <div id="welcome-body"></div>
+    <button id="btn-welcome-continue" class="save-btn" style="width:100%;margin-top:14px;color:var(--amber);border-color:var(--amber-dim);" data-i18n="welcomeBackContinue">Devam Et</button>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   MODULE: config.js  — machine types, part types, tuning constants
+   ================================================================ */
+const CONFIG = {
+  grid: { tile: 68, startCols: 11, startRows: 8, maxCols: 22, maxRows: 16 },
+  expandStep: 2,
+  expandCostBase: 260,
+  expandCostGrowth: 1.55,
+  newSiteCostBase: 2600,
+  newSiteCostGrowth: 1.7,
+  statsSampleMs: 5000,   // how often we snapshot the production rate
+  statsMaxSamples: 40,   // rolling window shown in the chart (~3.3 minutes)
+
+  dayLengthMs: 24 * 60 * 60 * 1000, // 1 in-game day = 24 real hours, wall-clock synced (see localMidnight/computeGameDayIndex)
+
+  // Offline catch-up: when the player returns, we replay Logistics/Orders
+  // ticks through the entire gap since they were last seen, using the exact
+  // same per-tick code as live play — just compressed into large synchronous
+  // steps instead of real time. Step size adapts to the gap length so short
+  // absences stay precise and very long ones stay bounded in iteration count.
+  offlineMinGapMs: 5000,        // ignore trivial gaps (quick refresh/reload)
+  offlineMaxIterations: 200000, // upper bound on simulation steps, keeps worst case fast
+  offlineStepMinMs: 250,        // finest step size (short/medium absences)
+  offlineStepMaxMs: 60000,      // coarsest step size (multi-day+ absences)
+
+  quotaBaseParts: 600,       // day-1 production target, sized for a real 24h day
+  quotaGrowthPerDay: 90,     // target grows this much each day
+  reputationStart: 60,
+  reputationMin: 0,
+  reputationMax: 100,
+  reputationGainOnSuccess: 5,
+  reputationLossOnFailure: 12,
+  prestigeThreshold: 100,        // reputation needed to trigger a prestige payout
+  prestigeCashRewardBase: 4000,  // scales with prestige level
+  prestigeResetReputation: 65,   // reputation after cashing in a prestige
+
+  // Daily operating expenses — deducted automatically at the end of each
+  // 24-hour in-game day. "workerCount" = 1 operator per machine + 1 per
+  // technician station + a small fixed admin/office staff.
+  expenseRates: {
+    baseAdminStaff: 2,
+    electricityBase: 25,          // fixed daily plant overhead
+    electricityPerMachine: 9,     // scales with installed machine count
+    electricityPerPart: 0.35,     // scales with actual daily output (usage-based)
+    waterPerWorker: 4,
+    salaryPerWorker: 190,
+    mealsPerWorker: 42,
+    transportPerWorker: 26,
+    // Personal protective equipment — consumables/wear replaced daily per worker
+    ppe: {
+      uniform:    { label: 'İş Kıyafeti',   label_en: 'Work Uniform',      perWorker: 5 },
+      gloves:     { label: 'Eldiven',       label_en: 'Gloves',            perWorker: 2 },
+      glasses:    { label: 'Gözlük',        label_en: 'Safety Glasses',    perWorker: 1.5 },
+      boots:      { label: 'İş Ayakkabısı', label_en: 'Work Boots',        perWorker: 3.5 },
+      headphones: { label: 'Kulaklık',      label_en: 'Ear Protection',    perWorker: 1.5 },
+      helmet:     { label: 'Baret',         label_en: 'Hard Hat',          perWorker: 2.5 },
+    },
+  },
+  expenseShortfallReputationLoss: 8, // extra reputation hit if expenses can't be fully paid
+
+  startMoney: 2200,
+  startSteel: 20,
+  steelUnitCost: 9,
+  orderIntervalMs: [14000, 24000],
+  orderExpiryMs: [50000, 85000],
+  maxActiveOrders: 3,
+  autosaveMs: 30000,
+
+  beltMs: 650,             // time for an item to travel across one belt tile
+  depotFeedMs: 900,        // depot attempts to push a steel item this often
+  machineInputCapacity: 3, // max steel a machine can stockpile locally
+
+  machineLifespanMs: 95000,  // continuous running time before a machine hits 100% wear
+  breakdownClearWear: 15,    // wear must drop below this for a broken machine to restart
+  manualRepairMinCost: 50,
+  manualRepairCostRatio: 0.4, // fraction of machine cost, scaled by current wear%
+
+  parts: {
+    bracket: { name: 'Braket', name_en: 'Bracket', color: '#5aa3d0', basePrice: 22 },
+    shaft:   { name: 'Mil',    name_en: 'Shaft',   color: '#4fbf82', basePrice: 30 },
+    gear:    { name: 'Dişli',  name_en: 'Gear',    color: '#e3b23c', basePrice: 38 },
+    housing: { name: 'Gövde',  name_en: 'Housing', color: '#b06fd8', basePrice: 68 },
+  },
+
+  // Every placeable thing on the factory floor lives here, keyed by id.
+  // kind drives which Building subclass gets constructed and how it behaves.
+  // requiresTech (optional) hides the item from the build shop until that
+  // tech node has been researched.
+  buildables: {
+    depot: {
+      id: 'depot', kind: 'depot', group: 'Lojistik', group_en: 'Logistics',
+      name: 'Ham Madde İstasyonu', name_en: 'Raw Material Depot',
+      desc: 'Çeliği bantlara besler', desc_en: 'Feeds steel onto belts',
+      color: '#8b939c', cost: 180, sellRatio: 0.5,
+    },
+    belt: {
+      id: 'belt', kind: 'belt', group: 'Lojistik', group_en: 'Logistics',
+      name: 'Konveyör Bandı', name_en: 'Conveyor Belt',
+      desc: 'Malzeme/parça taşır', desc_en: 'Transports material/parts',
+      color: '#5a636c', cost: 25, sellRatio: 0.5,
+    },
+    mill: {
+      id: 'mill', kind: 'machine', group: 'Üretim', group_en: 'Production',
+      name: 'CNC Freze', name_en: 'CNC Mill',
+      desc: 'Çelik → Braket', desc_en: 'Steel → Bracket',
+      color: '#5aa3d0', cost: 500, sellRatio: 0.5,
+      cycleMs: 9000, steelPerCycle: 1, outputPart: 'bracket',
+      upgradeCostBase: 350, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
+    lathe: {
+      id: 'lathe', kind: 'machine', group: 'Üretim', group_en: 'Production',
+      name: 'CNC Torna', name_en: 'CNC Lathe',
+      desc: 'Çelik → Mil', desc_en: 'Steel → Shaft',
+      color: '#4fbf82', cost: 750, sellRatio: 0.5,
+      cycleMs: 12000, steelPerCycle: 1, outputPart: 'shaft',
+      upgradeCostBase: 500, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
+    router: {
+      id: 'router', kind: 'machine', group: 'Üretim', group_en: 'Production',
+      name: 'CNC Router', name_en: 'CNC Router',
+      desc: 'Çelik → Dişli', desc_en: 'Steel → Gear',
+      color: '#e3b23c', cost: 950, sellRatio: 0.5,
+      cycleMs: 15000, steelPerCycle: 2, outputPart: 'gear',
+      upgradeCostBase: 650, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
+    cnc5axis: {
+      id: 'cnc5axis', kind: 'machine', group: 'Üretim', group_en: 'Production', requiresTech: 'adv_machine',
+      name: 'CNC 5-Eksen', name_en: 'CNC 5-Axis',
+      desc: 'Çelik → Gövde (yüksek değerli)', desc_en: 'Steel → Housing (high value)',
+      color: '#b06fd8', cost: 1800, sellRatio: 0.5,
+      cycleMs: 20000, steelPerCycle: 3, outputPart: 'housing',
+      upgradeCostBase: 1100, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
+    technician: {
+      id: 'technician', kind: 'technician', group: 'Bakım', group_en: 'Maintenance',
+      name: 'Teknisyen Kulübesi', name_en: 'Technician Hut',
+      desc: 'Yakındaki makineleri otomatik onarır', desc_en: 'Automatically repairs nearby machines',
+      color: '#c88a4a', cost: 320, sellRatio: 0.5,
+      range: 2, repairRatePerSec: 16,
+    },
+    warehouse: {
+      id: 'warehouse', kind: 'warehouse', group: 'Depolama', group_en: 'Storage',
+      name: 'Sevkiyat Deposu', name_en: 'Shipping Warehouse',
+      desc: 'Biten parçaları satılabilir hale getirir', desc_en: 'Makes finished parts sellable',
+      color: '#c8ccd0', cost: 180, sellRatio: 0.5,
+    },
+  },
+  shopOrder: ['depot', 'belt', 'mill', 'lathe', 'router', 'cnc5axis', 'technician', 'warehouse'],
+
+  bulkSellRatio: 0.55, // instant bulk-sell price = basePrice * this (below order value, to keep orders worthwhile)
+
+  // Tech tree: research nodes unlocked by spending money once prerequisites
+  // (requires: other tech ids) are already unlocked. effect is a free-text
+  // tag read by the relevant system (Orders/Logistics/shop filtering) via
+  // Tech.isUnlocked(id) — see the Tech module for where each one plugs in.
+  techTree: [
+    {
+      id: 'bulk_sell', name: 'Toplu Satış Anlaşması', name_en: 'Bulk Sale Agreement', tier: 1, requires: [],
+      cost: 3500, desc: 'Envanterdeki parçaları sipariş beklemeden anında nakde çevir.',
+      desc_en: 'Instantly cash in inventory parts without waiting for an order.',
+    },
+    {
+      id: 'fast_belts', name: 'Güçlendirilmiş Motorlar', name_en: 'Upgraded Motors', tier: 1, requires: [],
+      cost: 4000, desc: 'Tüm konveyör bantları %25 daha hızlı çalışır.',
+      desc_en: 'All conveyor belts run 25% faster.',
+    },
+    {
+      id: 'auto_delivery', name: 'Otomatik Sevkiyat', name_en: 'Automated Fulfillment', tier: 2, requires: ['bulk_sell'],
+      cost: 7500, desc: 'Yeterli parçan olduğunda siparişler otomatik teslim edilir.',
+      desc_en: 'Orders are delivered automatically once you have enough parts.',
+    },
+    {
+      id: 'adv_machine', name: 'İleri CNC Ar-Ge', name_en: 'Advanced CNC R&D', tier: 2, requires: ['fast_belts'],
+      cost: 10000, desc: 'CNC 5-Eksen makinesinin kilidini açar: yüksek değerli Gövde üretir.',
+      desc_en: 'Unlocks the CNC 5-Axis machine: produces high-value Housing parts.',
+    },
+    {
+      id: 'extra_order_slot', name: 'Kurumsal Müşteri Ağı', name_en: 'Corporate Client Network', tier: 3, requires: ['auto_delivery', 'adv_machine'],
+      cost: 16000, desc: 'Aynı anda bir sipariş daha kabul edebilirsin (+1 aktif sipariş).',
+      desc_en: 'You can accept one more order at a time (+1 active order slot).',
+    },
+  ],
+
+  clients: ['Nordyne A.Ş.', 'Volkan Otomotiv', 'Baltık Makine', 'Ege Endüstri', 'Kaya Metal', 'Trans-Fab'],
+};
+
+/* ================================================================
+   MODULE: i18n.js — language support (Turkish default, English toggle).
+   TRANSLATIONS holds every static/dynamic UI string keyed by id; CONFIG
+   objects (parts/buildables/tech/ppe) carry their own name_en/desc_en/
+   label_en fields, read via Lang.field(). Everything routes through
+   Lang.t()/Lang.field() so re-rendering after a language switch just
+   means re-running the existing refresh/build functions.
+   ================================================================ */
+const TRANSLATIONS = {
+  tr: {
+    appTitle: 'CNC FABRİKA', appSubtitle: 'v0.1 — yönetim simülasyonu',
+    labelCash: 'Nakit', labelSteel: 'Çelik Stoku', labelDay: 'Gün', labelClock: 'Saat', labelShift: 'Vardiya',
+    steelBuyTitle: 'Çelik Al',
+    btnBuild: 'İnşa Et', btnInventory: 'Envanter', btnStats: 'İstatistik', btnTech: 'Ar-Ge', btnSave: 'Kaydet',
+    btnLang: 'EN',
+    placingHint: 'zemine tıkla · sağ tık iptal', pickHint: 'seçip zemine tıkla',
+    sectionInventory: 'Envanter', sectionOrders: 'Siparişler', sectionSelected: 'Seçili Bina',
+    sectionSite: 'Saha', sectionQuota: 'Günlük Hedef', sectionBuild: 'İnşa Et',
+    noneSelected: 'Bir binaya tıkla',
+    expandSite: 'Sahayı Genişlet', maxSize: 'Maksimum boyutta',
+    newSite: 'Yeni Saha',
+    ordersActive: 'aktif', ordersEmpty: 'Şu an aktif sipariş yok. Birazdan yenisi gelecek.',
+    deliver: 'Teslim Et', notEnoughParts: 'Yetersiz Parça',
+    reputation: 'İtibar', prestigeLabel: 'Prestij', rewardMultiplier: 'Sipariş ödül çarpanı',
+    veryCloseToPrestige: 'Prestije çok yakın!',
+    invSteelNote: 'Çelik alımı artık üst çubuktan yapılabilir.',
+    bulkSellBtn: 'Sat',
+    statsTitle: 'Üretim İstatistikleri', statsChartCaption: 'parça / saat (anlık üretim hızı, tüm sahalar)',
+    statsWaiting: 'Veri toplanıyor… birkaç saniye üretim yap',
+    statTotal: 'Toplam',
+    totalProducedRow: 'adet',
+    completedOrders: 'Tamamlanan sipariş', totalOrderRevenue: 'Toplam sipariş geliri',
+    gameDay: 'Oyun günü', activeSites: 'Aktif saha sayısı',
+    expensesTitle: 'Günlük İşletme Giderleri', expensesNoneYet: 'İlk gün henüz tamamlanmadı — gider kesintisi yok.',
+    expensesLastDay: 'Son Gün Giderleri', expensesWorkersMachines: 'personel', expensesMachinesWord: 'makine',
+    expenseElectricity: 'Elektrik', expenseWater: 'Su', expenseSalary: 'Personel Maaşları',
+    expenseMeals: 'Personel Yemek', expenseTransport: 'Personel Servis', ppeGroup: 'Kişisel Koruyucu Ekipman',
+    expenseTotal: 'Toplam Günlük Gider', expenseCumulative: 'Toplam ödenen gider (kümülatif)',
+    techTitle: 'Ar-Ge Ağacı', techTier: 'Kademe', techRequired: 'Gerekli', techResearched: '✓ Araştırıldı',
+    techResearchBtn: 'Araştır',
+    moveTitle: 'Taşınıyor — zeminde yeni bir hücre seç', cancel: 'İptal',
+    directionRight: '→ Sağ', directionDown: '↓ Aşağı', directionLeft: '← Sol', directionUp: '↑ Yukarı',
+    beltDirection: 'Yön', beltOn: 'Üzerinde', beltEmpty: 'Boş', beltJammed: 'Tıkalı — hedef dolu ya da yön yanlış',
+    rotate: '↻ Döndür', move: '✥ Taşı', sell: 'Sat',
+    depotSource: 'Kaynak', depotSourceValue: 'Genel çelik stoku', feedInterval: 'Besleme aralığı',
+    warehouseReceived: 'Toplam teslim alınan',
+    techRange: 'Onarım yarıçapı', techRate: 'Onarım hızı', techCurrent: 'Şu an', techIdle: 'Boşta',
+    repairingWord: 'onarılıyor',
+    cell: 'hücre',
+    machineCycle: 'Çevrim süresi', machineOutput: 'Üretim', machineInputBuf: 'Girdi tamponu',
+    machineTotalProduced: 'Toplam üretilen', machineStatus: 'Durum',
+    statusRunning: 'Çalışıyor', statusIdle: 'Boşta', statusBeltWait: 'Bant bekliyor',
+    statusNoConn: 'Bağlantı yok — çevresine bant döşe', statusSteelWait: 'Çelik bekliyor',
+    statusBroken: 'Arızalı — onarım bekliyor',
+    wear: 'Aşınma', sound: 'Sağlam',
+    repairBtn: 'Onar', upgradeBtn: 'Yükselt', maxLevelBtn: 'Maks. seviye',
+    toastNotEnoughCash: 'Yetersiz nakit.', toastCellOccupied: 'Bu hücre dolu.',
+    toastPlaced: 'yerleştirildi.', toastSold: 'Satıldı', toastUpgraded: 'seviye', toastRepaired: 'onarıldı.',
+    toastMoved: 'taşındı.', toastSiteExpanded: 'Saha genişletildi', toastSiteMaxed: 'Saha zaten maksimum boyutta.',
+    toastNewSite: 'açıldı.', toastSteelBought: 'çelik alındı.', toastOrderDone: 'Sipariş tamamlandı',
+    toastBulkSold: 'satıldı', toastResearchDone: 'Araştırma tamamlandı',
+    toastSaved: 'Oyun kaydedildi.', toastSaveFailed: 'Kaydetme başarısız.', toastSaveUnavailable: 'Kayıt sistemi kullanılamıyor.',
+    toastLoaded: 'Kayıtlı oyun yüklendi.',
+    quotaMet: 'kotası dolduruldu', quotaMissed: 'kotası karşılanamadı', reputationUp: '— itibar arttı', reputationDown: '— itibar düştü',
+    expensesPaidPartial: 'Günlük giderler tam ödenemedi', expensesPaidFull: 'Günlük işletme gideri ödendi',
+    debtOf: 'borç', couldNotCover: 'karşılanamadı',
+    seeStats: 'detay: İstatistikler',
+    prestigeToast: 'Prestij', prestigeBonus: 'bonus, itibar', prestigeReset: "'e sıfırlandı.",
+    shiftDay: 'Gündüz', shiftEvening: 'Akşam', shiftNight: 'Gece',
+    depotFloorLabel: 'ÇELİK', warehouseFloorLabel: 'DEPO', technicianFloorLabel: 'TEKNİSYEN',
+    havingQty: '(elinde {n})',
+    quotaPartsUnit: 'parça', siteInfoBuildings: '— bu sahadaki bina sayısı: {n}',
+    siteName: 'Saha', mainSiteName: 'Ana Saha',
+    toastLevelUp: '{name} seviye {level} oldu.',
+    offlineLoadingTitle: 'Fabrika ilerlemeni hesaplıyor…',
+    offlineLoadingBody: 'Yokken üretim devam etti, bir saniye sürebilir.',
+    welcomeBackTitle: 'Tekrar Hoş Geldin!',
+    welcomeBackIntro: 'Sen yokken fabrikan {duration} boyunca çalışmaya devam etti:',
+    welcomeBackContinue: 'Devam Et',
+    welcomeBackDays: 'Geçen gün sayısı',
+    welcomeBackProduced: 'Üretilen parça',
+    welcomeBackOrders: 'Tamamlanan sipariş',
+    welcomeBackRevenue: 'Sipariş geliri',
+    welcomeBackMoney: 'Net nakit değişimi',
+    welcomeBackReputation: 'İtibar değişimi',
+    durationMinutes: '{n} dakika', durationHours: '{n} saat', durationDays: '{n} gün',
+  },
+  en: {
+    appTitle: 'CNC FACTORY', appSubtitle: 'v0.1 — management simulation',
+    labelCash: 'Cash', labelSteel: 'Steel Stock', labelDay: 'Day', labelClock: 'Time', labelShift: 'Shift',
+    steelBuyTitle: 'Buy Steel',
+    btnBuild: 'Build', btnInventory: 'Inventory', btnStats: 'Stats', btnTech: 'R&D', btnSave: 'Save',
+    btnLang: 'TR',
+    placingHint: 'tap the floor · right-click to cancel', pickHint: 'pick one, then tap the floor',
+    sectionInventory: 'Inventory', sectionOrders: 'Orders', sectionSelected: 'Selected Building',
+    sectionSite: 'Site', sectionQuota: 'Daily Target', sectionBuild: 'Build',
+    noneSelected: 'Tap a building',
+    expandSite: 'Expand Site', maxSize: 'Maximum size',
+    newSite: 'New Site',
+    ordersActive: 'active', ordersEmpty: 'No active orders right now. A new one is coming soon.',
+    deliver: 'Deliver', notEnoughParts: 'Not Enough Parts',
+    reputation: 'Reputation', prestigeLabel: 'Prestige', rewardMultiplier: 'Order reward multiplier',
+    veryCloseToPrestige: 'Very close to prestige!',
+    invSteelNote: 'Steel can now be bought from the top bar.',
+    bulkSellBtn: 'Sell',
+    statsTitle: 'Production Statistics', statsChartCaption: 'parts / hour (live production rate, all sites)',
+    statsWaiting: 'Collecting data… produce for a few seconds',
+    statTotal: 'Total',
+    totalProducedRow: 'units',
+    completedOrders: 'Completed orders', totalOrderRevenue: 'Total order revenue',
+    gameDay: 'Game day', activeSites: 'Active sites',
+    expensesTitle: 'Daily Operating Expenses', expensesNoneYet: 'The first day hasn\'t finished yet — no expenses deducted.',
+    expensesLastDay: 'Last Day\'s Expenses', expensesWorkersMachines: 'workers', expensesMachinesWord: 'machines',
+    expenseElectricity: 'Electricity', expenseWater: 'Water', expenseSalary: 'Staff Salaries',
+    expenseMeals: 'Staff Meals', expenseTransport: 'Staff Transport', ppeGroup: 'Personal Protective Equipment',
+    expenseTotal: 'Total Daily Expense', expenseCumulative: 'Total expenses paid (cumulative)',
+    techTitle: 'R&D Tree', techTier: 'Tier', techRequired: 'Requires', techResearched: '✓ Researched',
+    techResearchBtn: 'Research',
+    moveTitle: 'Moving — pick a new cell on the floor', cancel: 'Cancel',
+    directionRight: '→ Right', directionDown: '↓ Down', directionLeft: '← Left', directionUp: '↑ Up',
+    beltDirection: 'Direction', beltOn: 'Carrying', beltEmpty: 'Empty', beltJammed: 'Jammed — destination full or wrong direction',
+    rotate: '↻ Rotate', move: '✥ Move', sell: 'Sell',
+    depotSource: 'Source', depotSourceValue: 'Shared steel stock', feedInterval: 'Feed interval',
+    warehouseReceived: 'Total received',
+    techRange: 'Repair radius', techRate: 'Repair rate', techCurrent: 'Currently', techIdle: 'Idle',
+    repairingWord: 'repairing',
+    cell: 'cells',
+    machineCycle: 'Cycle time', machineOutput: 'Output', machineInputBuf: 'Input buffer',
+    machineTotalProduced: 'Total produced', machineStatus: 'Status',
+    statusRunning: 'Running', statusIdle: 'Idle', statusBeltWait: 'Waiting for belt',
+    statusNoConn: 'Not connected — lay a belt next to it', statusSteelWait: 'Waiting for steel',
+    statusBroken: 'Broken down — needs repair',
+    wear: 'Wear', sound: 'Sound',
+    repairBtn: 'Repair', upgradeBtn: 'Upgrade', maxLevelBtn: 'Max level',
+    toastNotEnoughCash: 'Not enough cash.', toastCellOccupied: 'That cell is occupied.',
+    toastPlaced: 'placed.', toastSold: 'Sold', toastUpgraded: 'level', toastRepaired: 'repaired.',
+    toastMoved: 'moved.', toastSiteExpanded: 'Site expanded', toastSiteMaxed: 'Site is already at maximum size.',
+    toastNewSite: 'opened.', toastSteelBought: 'steel purchased.', toastOrderDone: 'Order completed',
+    toastBulkSold: 'sold', toastResearchDone: 'Research completed',
+    toastSaved: 'Game saved.', toastSaveFailed: 'Save failed.', toastSaveUnavailable: 'Save system unavailable.',
+    toastLoaded: 'Save loaded.',
+    quotaMet: 'quota met', quotaMissed: 'quota missed', reputationUp: '— reputation increased', reputationDown: '— reputation dropped',
+    expensesPaidPartial: 'Daily expenses could not be fully paid', expensesPaidFull: 'Daily operating expenses paid',
+    debtOf: 'owed', couldNotCover: 'unpaid',
+    seeStats: 'details: Stats',
+    prestigeToast: 'Prestige', prestigeBonus: 'bonus, reputation reset to', prestigeReset: '.',
+    shiftDay: 'Day', shiftEvening: 'Evening', shiftNight: 'Night',
+    depotFloorLabel: 'STEEL', warehouseFloorLabel: 'WAREHOUSE', technicianFloorLabel: 'TECHNICIAN',
+    havingQty: '(have {n})',
+    quotaPartsUnit: 'parts', siteInfoBuildings: '— buildings on this site: {n}',
+    siteName: 'Site', mainSiteName: 'Main Site',
+    toastLevelUp: '{name} is now level {level}.',
+    offlineLoadingTitle: 'Calculating your factory\'s progress…',
+    offlineLoadingBody: 'Production kept going while you were away, this may take a second.',
+    welcomeBackTitle: 'Welcome Back!',
+    welcomeBackIntro: 'While you were away, your factory kept running for {duration}:',
+    welcomeBackContinue: 'Continue',
+    welcomeBackDays: 'Days passed',
+    welcomeBackProduced: 'Parts produced',
+    welcomeBackOrders: 'Orders completed',
+    welcomeBackRevenue: 'Order revenue',
+    welcomeBackMoney: 'Net cash change',
+    welcomeBackReputation: 'Reputation change',
+    durationMinutes: '{n} minutes', durationHours: '{n} hours', durationDays: '{n} days',
+  },
+};
+
+const Lang = {
+  current: 'tr',
+  t(key, vars) {
+    let str = (TRANSLATIONS[Lang.current] && TRANSLATIONS[Lang.current][key]) ?? TRANSLATIONS.tr[key] ?? key;
+    if (vars) for (const [k, v] of Object.entries(vars)) str = str.replaceAll(`{${k}}`, v);
+    return str;
+  },
+  // Reads a localized field off a CONFIG object, e.g. Lang.field(part,'name')
+  // returns part.name_en when English is active and the field exists,
+  // otherwise falls back to the Turkish base field.
+  field(obj, base) {
+    if (!obj) return '';
+    if (Lang.current === 'en' && obj[base + '_en']) return obj[base + '_en'];
+    return obj[base];
+  },
+  // Locale-aware thousands/decimal formatting for money figures.
+  money(n) {
+    return Math.round(n).toLocaleString(Lang.current === 'en' ? 'en-US' : 'tr-TR');
+  },
+  set(lang) {
+    Lang.current = lang;
+    document.documentElement.lang = lang;
+    UI.applyStaticText();
+    UI.refreshAll();
+  },
+  toggle() { Lang.set(Lang.current === 'tr' ? 'en' : 'tr'); },
+};
+
+// Cardinal directions belts can face, in clockwise rotation order.
+const DIRS = {
+  right: { dx: 1, dy: 0 },
+  down:  { dx: 0, dy: 1 },
+  left:  { dx: -1, dy: 0 },
+  up:    { dx: 0, dy: -1 },
+};
+const DIR_ORDER = ['right', 'down', 'left', 'up'];
+
+function computeDailyQuota(day) {
+  return Math.round(CONFIG.quotaBaseParts + (day - 1) * CONFIG.quotaGrowthPerDay);
+}
+// Timestamp of local midnight at/before the given moment — the anchor point
+// every wall-clock calculation below is built on.
+function localMidnight(ts) {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+// 1-based day index for this save, counted in real calendar days since
+// State.firstEpochMs. Because both are anchored to local midnight, this
+// always lines up with the player's actual calendar.
+function computeGameDayIndex(ts) {
+  if (!State.firstEpochMs) return 1;
+  return Math.floor((localMidnight(ts) - State.firstEpochMs) / CONFIG.dayLengthMs) + 1;
+}
+function getGameHourFloat() {
+  // Real local wall-clock time of day, in hours — this IS the player's
+  // actual clock, so the in-game clock/shift always matches real life.
+  return (Date.now() - localMidnight(Date.now())) / 3600000;
+}
+function getShift(hourFloat) {
+  const h = hourFloat % 24;
+  if (h >= 6 && h < 14) return { short: Lang.t('shiftDay'), icon: '☀️', color: '#e3b23c' };
+  if (h >= 14 && h < 22) return { short: Lang.t('shiftEvening'), icon: '🌆', color: '#e08a4a' };
+  return { short: Lang.t('shiftNight'), icon: '🌙', color: '#5a8fd0' };
+}
+function getNightAlpha(hourFloat) {
+  // brightness peaks at 13:00 (noon-ish), dips at 01:00, smooth cosine curve
+  const rad = ((hourFloat - 13) / 24) * Math.PI * 2;
+  const brightness = (Math.cos(rad) + 1) / 2; // 1 at 13:00, 0 at 01:00
+  return (1 - brightness) * 0.5; // max darkness alpha 0.5 at deep night
+}
+function getDawnDuskAlpha(hourFloat) {
+  // small warm glow within ~1.5h of sunrise (06:00) or sunset (18:00)
+  const dist = Math.min(
+    Math.abs(hourFloat - 6), Math.abs(hourFloat - 18),
+    Math.abs(hourFloat - 6 - 24), Math.abs(hourFloat - 18 - 24),
+    Math.abs(hourFloat - 6 + 24), Math.abs(hourFloat - 18 + 24)
+  );
+  return Math.max(0, 1 - dist / 1.5) * 0.12;
+}
+
+/* ================================================================
+   MODULE: state.js — central mutable game state
+   ================================================================ */
+const State = {
+  money: CONFIG.startMoney,
+  steel: CONFIG.startSteel,
+  day: 1,
+  reputation: CONFIG.reputationStart,
+  prestigeLevel: 0,
+  dailyProduced: 0,
+  dailyQuota: computeDailyQuota(1),
+  firstEpochMs: null, // wall-clock timestamp anchoring "Day 1, 00:00" for this save (local midnight)
+  lastSeenMs: null,   // wall-clock timestamp of the last tick/save — used to compute the offline gap on next load
+  unlockedTech: [], // array of tech ids the player has researched
+  inventory: Object.fromEntries(Object.keys(CONFIG.parts).map(k => [k, 0])),
+  stats: {
+    totalProducedByPart: Object.fromEntries(Object.keys(CONFIG.parts).map(k => [k, 0])),
+    sinceLastSample: Object.fromEntries(Object.keys(CONFIG.parts).map(k => [k, 0])),
+    totalOrdersCompleted: 0,
+    totalRevenue: 0,
+    totalExpensesPaid: 0,
+    lastExpenseBreakdown: null, // most recent day's { electricity, water, salary, meals, transport, ppe:{...}, total, workerCount, machineCount }
+    expenseHistory: [],         // rolling list of { day, total } for the trend chart
+    history: [], // { t, rates: {bracket,shaft,gear} (parts/hour), total }
+  },
+  sites: [],              // each site: { id, name, cols, rows, grid, buildings, camera, expandCount }
+  currentSiteId: null,
+  orders: [],
+  selectedBuilding: null,
+  buildSelection: null,  // buildable id currently armed for placement
+  moveSelection: null,   // building currently armed for relocation
+  nextBuildingId: 1,
+  nextSiteId: 1,
+  nextOrderId: 1,
+  lastOrderSpawn: 0,
+};
+
+/* ================================================================
+   MODULE: tech.js — research tree. Nodes are unlocked by spending money
+   once prerequisites are met; other systems (Orders, Logistics, shop
+   filtering) check Tech.isUnlocked(id) to gate their behavior.
+   ================================================================ */
+const Tech = {
+  isUnlocked(id) { return State.unlockedTech.includes(id); },
+  canResearch(node) {
+    if (Tech.isUnlocked(node.id)) return false;
+    return node.requires.every(r => Tech.isUnlocked(r));
+  },
+  research(id) {
+    const node = CONFIG.techTree.find(t => t.id === id);
+    if (!node || !Tech.canResearch(node)) return;
+    if (!Economy.canAfford(node.cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(node.cost);
+    State.unlockedTech.push(id);
+    UI.toast(`${Lang.t('toastResearchDone')}: ${Lang.field(node, 'name')}`);
+    UI.refreshTechPanel();
+    UI.buildShop();
+    UI.refreshOrders();
+  },
+  maxActiveOrders() {
+    return CONFIG.maxActiveOrders + (Tech.isUnlocked('extra_order_slot') ? 1 : 0);
+  },
+  beltMs() {
+    return Tech.isUnlocked('fast_belts') ? CONFIG.beltMs * 0.75 : CONFIG.beltMs;
+  },
+};
+
+/* ================================================================
+   MODULE: expenses.js — daily operating costs, applied automatically at
+   the end of every 24h in-game day. Headcount is derived from installed
+   equipment (1 operator per machine, 1 per technician station) plus a
+   small fixed admin staff; every cost category scales off that headcount
+   or off actual daily output (electricity usage).
+   ================================================================ */
+const Expenses = {
+  counts() {
+    let machineCount = 0, workerCount = 0;
+    for (const site of State.sites) {
+      for (const b of site.buildings) {
+        if (b.kind === 'machine') { machineCount++; workerCount++; }
+        else if (b.kind === 'technician') { workerCount++; }
+      }
+    }
+    workerCount += CONFIG.expenseRates.baseAdminStaff;
+    return { machineCount, workerCount };
+  },
+  computeDaily() {
+    const r = CONFIG.expenseRates;
+    const { machineCount, workerCount } = Expenses.counts();
+    const electricity = r.electricityBase + r.electricityPerMachine * machineCount + r.electricityPerPart * State.dailyProduced;
+    const water = r.waterPerWorker * workerCount;
+    const salary = r.salaryPerWorker * workerCount;
+    const meals = r.mealsPerWorker * workerCount;
+    const transport = r.transportPerWorker * workerCount;
+    const ppe = {};
+    let ppeTotal = 0;
+    for (const [key, def] of Object.entries(r.ppe)) {
+      const v = def.perWorker * workerCount;
+      ppe[key] = v;
+      ppeTotal += v;
+    }
+    const total = electricity + water + salary + meals + transport + ppeTotal;
+    return { electricity, water, salary, meals, transport, ppe, ppeTotal, total, workerCount, machineCount };
+  },
+  // Deducts the day's expenses from company cash. If cash can't fully cover
+  // them, whatever's available is paid, the rest goes unpaid, and it costs
+  // extra reputation on top of any quota penalty — running a factory you
+  // can't afford to staff has consequences.
+  applyDaily() {
+    const breakdown = Expenses.computeDaily();
+    const owed = Math.round(breakdown.total);
+    let paid = owed, shortfall = 0;
+    if (State.money >= owed) {
+      State.money -= owed;
+    } else {
+      paid = Math.round(State.money);
+      shortfall = owed - paid;
+      State.money = 0;
+      State.reputation = Math.max(CONFIG.reputationMin, State.reputation - CONFIG.expenseShortfallReputationLoss);
+    }
+    State.stats.totalExpensesPaid += paid;
+    State.stats.lastExpenseBreakdown = breakdown;
+    State.stats.expenseHistory.push({ day: State.day, total: owed });
+    if (State.stats.expenseHistory.length > 30) State.stats.expenseHistory.shift();
+    UI.refreshTopbar();
+    return { breakdown, owed, paid, shortfall };
+  },
+};
+
+/* ================================================================
+   MODULE: sites.js — multiple independent factory floors.
+   Money/steel/inventory/orders are shared company-wide; each site has
+   its own grid, buildings and camera. Logistics ticks every site every
+   frame, so factories you're not currently viewing keep producing.
+   ================================================================ */
+const Sites = {
+  create(name) {
+    const site = {
+      id: State.nextSiteId++,
+      name,
+      cols: CONFIG.grid.startCols,
+      rows: CONFIG.grid.startRows,
+      grid: [],
+      buildings: [],
+      camera: { x: 0, y: 0, zoom: 1 },
+      expandCount: 0,
+    };
+    Sites.initGrid(site);
+    return site;
+  },
+  initGrid(site) {
+    site.grid = Array.from({ length: site.rows }, () => Array(site.cols).fill(null));
+  },
+  current() { return State.sites.find(s => s.id === State.currentSiteId); },
+  switchTo(id) {
+    if (!State.sites.find(s => s.id === id) || id === State.currentSiteId) return;
+    State.currentSiteId = id;
+    State.selectedBuilding = null;
+    Input.cancelAll();
+    UI.refreshInspector();
+    UI.refreshSiteTabs();
+    UI.refreshSitePanel();
+  },
+  newSiteCost() {
+    return Math.round(CONFIG.newSiteCostBase * Math.pow(CONFIG.newSiteCostGrowth, State.sites.length - 1));
+  },
+  addNew() {
+    const cost = Sites.newSiteCost();
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost);
+    const site = Sites.create(`${Lang.t('siteName')} ${State.sites.length + 1}`);
+    State.sites.push(site);
+    Sites.switchTo(site.id);
+    UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+  },
+  expandCost(site) {
+    return Math.round(CONFIG.expandCostBase * Math.pow(CONFIG.expandCostGrowth, site.expandCount));
+  },
+  isMaxSize(site) { return site.cols >= CONFIG.grid.maxCols && site.rows >= CONFIG.grid.maxRows; },
+  expand(site) {
+    if (Sites.isMaxSize(site)) { UI.toast(Lang.t('toastSiteMaxed')); return; }
+    const cost = Sites.expandCost(site);
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost);
+    const addCols = Math.min(CONFIG.expandStep, CONFIG.grid.maxCols - site.cols);
+    const addRows = Math.min(CONFIG.expandStep, CONFIG.grid.maxRows - site.rows);
+    for (const row of site.grid) { for (let i = 0; i < addCols; i++) row.push(null); }
+    site.cols += addCols;
+    for (let i = 0; i < addRows; i++) site.grid.push(Array(site.cols).fill(null));
+    site.rows += addRows;
+    site.expandCount += 1;
+    UI.toast(`${Lang.t('toastSiteExpanded')}: ${site.cols}×${site.rows}`);
+    UI.refreshSitePanel();
+  },
+};
+
+/* ================================================================
+   MODULE: economy.js — money / inventory helpers
+   ================================================================ */
+const Economy = {
+  canAfford(amount) { return State.money >= amount; },
+  spend(amount) { State.money -= amount; UI.refreshTopbar(); },
+  earn(amount) { State.money += amount; UI.refreshTopbar(); },
+  addSteel(n) { State.steel += n; UI.refreshTopbar(); },
+  consumeSteel(n) {
+    if (State.steel < n) return false;
+    State.steel -= n; UI.refreshTopbar(); return true;
+  },
+  addPart(type, n) {
+    State.inventory[type] = (State.inventory[type] || 0) + n;
+    State.stats.totalProducedByPart[type] = (State.stats.totalProducedByPart[type] || 0) + n;
+    State.stats.sinceLastSample[type] = (State.stats.sinceLastSample[type] || 0) + n;
+    State.dailyProduced += n;
+    UI.refreshInventory();
+  },
+  removeParts(type, n) {
+    if ((State.inventory[type] || 0) < n) return false;
+    State.inventory[type] -= n; UI.refreshInventory(); return true;
+  },
+  buySteel(qty, cost) {
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost); Economy.addSteel(qty);
+    UI.toast(`+${qty} ${Lang.t('toastSteelBought')}`);
+  },
+  takeSteelFromPool(n) {
+    if (State.steel < n) return false;
+    State.steel -= n; UI.refreshTopbar(); return true;
+  },
+  bulkSell(partType) {
+    if (!Tech.isUnlocked('bulk_sell')) return;
+    const qty = State.inventory[partType] || 0;
+    if (qty <= 0) return;
+    const unitPrice = Math.round(CONFIG.parts[partType].basePrice * CONFIG.bulkSellRatio);
+    const total = unitPrice * qty;
+    Economy.removeParts(partType, qty);
+    Economy.earn(total);
+    UI.toast(`${qty}x ${Lang.field(CONFIG.parts[partType], 'name')} ${Lang.t('toastBulkSold')}: +$${Lang.money(total)}`);
+    UI.refreshInventory();
+  },
+};
+
+/* ================================================================
+   MODULE: buildings.js — Building hierarchy (belt / depot / warehouse / machine)
+   ================================================================ */
+class Building {
+  constructor(defId, row, col) {
+    this.id = State.nextBuildingId++;
+    this.defId = defId;
+    this.def = CONFIG.buildables[defId];
+    this.kind = this.def.kind;
+    this.row = row; this.col = col;
+  }
+}
+
+class BeltBuilding extends Building {
+  constructor(defId, row, col) {
+    super(defId, row, col);
+    this.dir = 'right';
+    this.item = null; // { type, progress(0..1) }
+  }
+  rotate() {
+    const i = DIR_ORDER.indexOf(this.dir);
+    this.dir = DIR_ORDER[(i + 1) % DIR_ORDER.length];
+  }
+  get sellRefund() { return Math.round(this.def.cost * this.def.sellRatio); }
+}
+
+class DepotBuilding extends Building {
+  constructor(defId, row, col) {
+    super(defId, row, col);
+    this.feedTimer = 0;
+  }
+  get sellRefund() { return Math.round(this.def.cost * this.def.sellRatio); }
+}
+
+class WarehouseBuilding extends Building {
+  constructor(defId, row, col) {
+    super(defId, row, col);
+    this.totalReceived = 0;
+  }
+  get sellRefund() { return Math.round(this.def.cost * this.def.sellRatio); }
+}
+
+class TechnicianBuilding extends Building {
+  constructor(defId, row, col) {
+    super(defId, row, col);
+    this.currentTargetId = null; // id of the machine currently being repaired
+  }
+  get sellRefund() { return Math.round(this.def.cost * this.def.sellRatio); }
+}
+
+class MachineBuilding extends Building {
+  constructor(defId, row, col) {
+    super(defId, row, col);
+    this.level = 1;
+    this.progress = 0;     // 0..1 within current cycle
+    this.running = false;
+    this.inputBuffer = 0;  // local steel stockpile, fed by belts
+    this.outputHeld = null; // { type } finished part waiting for a free belt
+    this.totalProduced = 0;
+    this.wear = 0;          // 0..100, rises while running, only technicians/manual repair reduce it
+    this.broken = false;    // true once wear hits 100; blocks all processing until repaired
+  }
+  get cycleMs() { return this.def.cycleMs * Math.pow(this.def.upgradeCycleFactor, this.level - 1); }
+  get upgradeCost() { return Math.round(this.def.upgradeCostBase * Math.pow(1.6, this.level - 1)); }
+  canUpgrade() { return this.level < this.def.maxLevel; }
+  get sellRefund() { return Math.round(this.def.cost * this.def.sellRatio * (1 + 0.15 * (this.level - 1))); }
+  get repairCost() { return Math.max(CONFIG.manualRepairMinCost, Math.round((this.wear / 100) * this.def.cost * CONFIG.manualRepairCostRatio)); }
+}
+
+const Factory = {
+  create(defId, row, col) {
+    switch (CONFIG.buildables[defId].kind) {
+      case 'belt': return new BeltBuilding(defId, row, col);
+      case 'depot': return new DepotBuilding(defId, row, col);
+      case 'warehouse': return new WarehouseBuilding(defId, row, col);
+      case 'machine': return new MachineBuilding(defId, row, col);
+      case 'technician': return new TechnicianBuilding(defId, row, col);
+    }
+  },
+  place(defId, row, col, site = Sites.current()) {
+    const def = CONFIG.buildables[defId];
+    if (!def || !site) return false;
+    if (row < 0 || col < 0 || row >= site.rows || col >= site.cols) return false;
+    if (site.grid[row][col]) { UI.toast(Lang.t('toastCellOccupied')); return false; }
+    if (!Economy.canAfford(def.cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return false; }
+    Economy.spend(def.cost);
+    const b = Factory.create(defId, row, col);
+    site.grid[row][col] = b;
+    site.buildings.push(b);
+    UI.toast(`${Lang.field(def, 'name')} ${Lang.t('toastPlaced')}`);
+    return true;
+  },
+  remove(b, site = Sites.current()) {
+    site.grid[b.row][b.col] = null;
+    site.buildings = site.buildings.filter(x => x.id !== b.id);
+    if (State.selectedBuilding === b) State.selectedBuilding = null;
+  },
+  sell(b) {
+    const refund = b.sellRefund;
+    Economy.earn(refund);
+    Factory.remove(b);
+    UI.toast(`${Lang.t('toastSold')}: +$${refund}`);
+    UI.refreshInspector();
+  },
+  upgrade(b) {
+    if (b.kind !== 'machine' || !b.canUpgrade()) return;
+    const cost = b.upgradeCost;
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost);
+    b.level += 1;
+    UI.toast(Lang.t('toastLevelUp', { name: Lang.field(b.def, 'name'), level: b.level }));
+    UI.refreshInspector();
+  },
+  rotate(b) {
+    if (b.kind !== 'belt') return;
+    b.rotate();
+  },
+  repair(b) {
+    if (b.kind !== 'machine' || b.wear <= 0) return;
+    const cost = b.repairCost;
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost);
+    b.wear = 0;
+    b.broken = false;
+    UI.toast(`${Lang.field(b.def, 'name')} ${Lang.t('toastRepaired')}`);
+    UI.refreshInspector();
+  },
+  startMove(b) {
+    State.buildSelection = null;
+    document.getElementById('floor').classList.remove('placing');
+    State.moveSelection = b;
+    document.getElementById('floor').classList.add('moving');
+    UI.refreshInspector();
+  },
+  move(b, row, col, site = Sites.current()) {
+    if (row < 0 || col < 0 || row >= site.rows || col >= site.cols) return;
+    if (row === b.row && col === b.col) { Input.cancelMove(); return; } // dropped on itself, just cancel
+    if (site.grid[row][col]) { UI.toast(Lang.t('toastCellOccupied')); return; }
+    site.grid[b.row][b.col] = null;
+    b.row = row; b.col = col;
+    site.grid[row][col] = b;
+    State.moveSelection = null;
+    document.getElementById('floor').classList.remove('moving');
+    UI.toast(`${Lang.field(b.def, 'name')} ${Lang.t('toastMoved')}`);
+    UI.refreshInspector();
+  },
+};
+
+/* ================================================================
+   MODULE: logistics.js — moves items across belts, feeds/drains buildings
+   Tick order matters: machines free up their output BEFORE trying to
+   produce a new part, so a full belt correctly stalls production.
+   ================================================================ */
+function neighborCell(site, row, col, dir) {
+  const d = DIRS[dir];
+  const nr = row + d.dy, nc = col + d.dx;
+  if (nr < 0 || nc < 0 || nr >= site.rows || nc >= site.cols) return null;
+  return site.grid[nr][nc];
+}
+function findEmptyAdjacentBelt(site, row, col) {
+  for (const dir of DIR_ORDER) {
+    const n = neighborCell(site, row, col, dir);
+    if (n && n.kind === 'belt' && !n.item) return n;
+  }
+  return null;
+}
+function hasAdjacentBelt(site, row, col) {
+  for (const dir of DIR_ORDER) {
+    const n = neighborCell(site, row, col, dir);
+    if (n && n.kind === 'belt') return true;
+  }
+  return false;
+}
+
+const Logistics = {
+  tick(dtMs) {
+    for (const site of State.sites) Logistics.tickSite(site, dtMs);
+  },
+  tickSite(site, dtMs) {
+    // Phase A — machines try to hand off a finished part to any adjacent free belt.
+    for (const b of site.buildings) {
+      if (b.kind === 'machine' && b.outputHeld) {
+        const belt = findEmptyAdjacentBelt(site, b.row, b.col);
+        if (belt) { belt.item = { type: b.outputHeld.type, progress: 0 }; b.outputHeld = null; }
+      }
+    }
+    // Phase B — depots try to spawn a steel item onto an adjacent free belt.
+    for (const b of site.buildings) {
+      if (b.kind !== 'depot') continue;
+      b.feedTimer += dtMs;
+      if (b.feedTimer >= CONFIG.depotFeedMs && State.steel > 0) {
+        const belt = findEmptyAdjacentBelt(site, b.row, b.col);
+        if (belt) {
+          belt.item = { type: 'steel', progress: 0 };
+          Economy.takeSteelFromPool(1);
+          b.feedTimer = 0;
+        }
+      }
+    }
+    // Phase C — belts advance items and hand them to the next tile.
+    for (const b of site.buildings) {
+      if (b.kind !== 'belt' || !b.item) continue;
+      b.item.progress += dtMs / Tech.beltMs();
+      if (b.item.progress < 1) continue;
+      const target = neighborCell(site, b.row, b.col, b.dir);
+      if (!target) { b.item.progress = 1; continue; } // dead end, stalled
+      if (target.kind === 'belt') {
+        if (!target.item) { target.item = { type: b.item.type, progress: 0 }; b.item = null; }
+        else b.item.progress = 1; // downstream belt occupied, stalled
+      } else if (target.kind === 'machine') {
+        if (b.item.type === 'steel' && target.inputBuffer < CONFIG.machineInputCapacity) {
+          target.inputBuffer += 1; b.item = null;
+        } else b.item.progress = 1; // wrong material or buffer full
+      } else if (target.kind === 'warehouse') {
+        if (CONFIG.parts[b.item.type]) {
+          Economy.addPart(b.item.type, 1);
+          target.totalReceived += 1;
+          b.item = null;
+        } else b.item.progress = 1; // raw steel can't be sold, stalled
+      } else {
+        b.item.progress = 1; // depot or other non-receiving tile, stalled
+      }
+    }
+    // Phase D — machines consume buffered steel and run their production cycle.
+    for (const b of site.buildings) {
+      if (b.kind !== 'machine' || b.broken) continue;
+      if (!b.running) {
+        if (b.inputBuffer >= b.def.steelPerCycle) {
+          b.inputBuffer -= b.def.steelPerCycle;
+          b.running = true;
+          b.progress = 0;
+        }
+        continue;
+      }
+      b.progress += dtMs / b.cycleMs;
+      // wear accrues only while actively cutting
+      b.wear = Math.min(100, b.wear + (dtMs / CONFIG.machineLifespanMs) * 100);
+      if (b.wear >= 100) {
+        b.wear = 100;
+        b.broken = true;
+        b.running = false;
+        continue; // breaks down mid-cycle — the in-progress part is lost
+      }
+      if (b.progress >= 1) {
+        if (b.outputHeld === null) {
+          b.progress = 0;
+          b.running = false;
+          b.outputHeld = { type: b.def.outputPart };
+          b.totalProduced += 1;
+        } else {
+          b.progress = 1; // finished but no free belt yet — stalled waiting to unload
+        }
+      }
+    }
+    // Phase E — technicians repair the most worn machine within their range.
+    for (const t of site.buildings) {
+      if (t.kind !== 'technician') continue;
+      let target = null, worstWear = 0;
+      for (const m of site.buildings) {
+        if (m.kind !== 'machine' || m.wear <= 0) continue;
+        const dist = Math.max(Math.abs(m.row - t.row), Math.abs(m.col - t.col));
+        if (dist > t.def.range) continue;
+        if (m.wear > worstWear) { worstWear = m.wear; target = m; }
+      }
+      t.currentTargetId = target ? target.id : null;
+      if (target) {
+        target.wear = Math.max(0, target.wear - t.def.repairRatePerSec * (dtMs / 1000));
+        if (target.broken && target.wear < CONFIG.breakdownClearWear) target.broken = false;
+      }
+    }
+  },
+};
+
+/* ================================================================
+   MODULE: orders.js — contract generation & fulfillment
+   ================================================================ */
+const Orders = {
+  spawn() {
+    if (State.orders.length >= Tech.maxActiveOrders()) return;
+    const partKeys = Object.keys(CONFIG.parts);
+    const partType = partKeys[Math.floor(Math.random() * partKeys.length)];
+    const qty = 3 + Math.floor(Math.random() * 6);
+    const base = CONFIG.parts[partType].basePrice;
+    const repMultiplier = 0.6 + (State.reputation / 100) * 0.8; // 0.6x at 0 rep, 1.4x at 100 rep
+    const reward = Math.round(qty * base * (1.4 + Math.random() * 0.6) * repMultiplier);
+    const [minE, maxE] = CONFIG.orderExpiryMs;
+    const duration = minE + Math.random() * (maxE - minE);
+    const order = {
+      id: State.nextOrderId++,
+      client: CONFIG.clients[Math.floor(Math.random() * CONFIG.clients.length)],
+      partType, qty, reward,
+      createdAt: Date.now(),
+      duration,
+    };
+    State.orders.push(order);
+    UI.refreshOrders();
+  },
+  fulfill(order) {
+    if ((State.inventory[order.partType] || 0) < order.qty) return;
+    Economy.removeParts(order.partType, order.qty);
+    Economy.earn(order.reward);
+    State.stats.totalOrdersCompleted += 1;
+    State.stats.totalRevenue += order.reward;
+    State.orders = State.orders.filter(o => o.id !== order.id);
+    UI.toast(`${Lang.t('toastOrderDone')}: +$${order.reward}`);
+    UI.refreshOrders();
+  },
+  tick(now) {
+    const before = State.orders.length;
+    State.orders = State.orders.filter(o => now - o.createdAt < o.duration);
+    if (State.orders.length !== before) UI.refreshOrders();
+    // Auto-fulfill needs the tech normally, but while catching up offline
+    // there's nobody around to click "Deliver" — so any order the player
+    // could afford to fill manually gets filled automatically instead of
+    // just expiring unclaimed.
+    if (Tech.isUnlocked('auto_delivery') || Game.offlineCatchupActive) {
+      // snapshot the list since fulfill() mutates State.orders in place
+      for (const o of [...State.orders]) {
+        if ((State.inventory[o.partType] || 0) >= o.qty) Orders.fulfill(o);
+      }
+    }
+    if (now - State.lastOrderSpawn > randRange(...CONFIG.orderIntervalMs)) {
+      State.lastOrderSpawn = now;
+      Orders.spawn();
+    }
+  },
+};
+function randRange(a, b) { return a + Math.random() * (b - a); }
+
+/* ================================================================
+   MODULE: renderer.js — canvas drawing (grid + buildings + item flow)
+   ================================================================ */
+const Renderer = {
+  canvas: null, ctx: null,
+  init() {
+    this.canvas = document.getElementById('floor');
+    this.ctx = this.canvas.getContext('2d');
+    this.resizeToContainer();
+    window.addEventListener('resize', () => this.resizeToContainer());
+  },
+  resizeToContainer() {
+    const wrap = document.getElementById('floor-wrap');
+    this.canvas.width = wrap.clientWidth;
+    this.canvas.height = wrap.clientHeight;
+  },
+  draw() {
+    const site = Sites.current();
+    if (!site) return;
+    const { ctx, canvas } = this;
+    const { tile } = CONFIG.grid;
+    const cam = site.camera;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(cam.zoom, 0, 0, cam.zoom, -cam.x * cam.zoom, -cam.y * cam.zoom);
+
+    // tile checker + walkway lane markings on open (unbuilt) floor
+    for (let r = 0; r < site.rows; r++) {
+      for (let c = 0; c < site.cols; c++) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? '#1a2025' : '#1d2429';
+        ctx.fillRect(c * tile, r * tile, tile, tile);
+        if (!site.grid[r][c]) drawWalkwayMarking(ctx, c * tile, r * tile, tile);
+      }
+    }
+    // subtle border
+    ctx.strokeStyle = '#2a3138';
+    ctx.lineWidth = 1;
+    for (let r = 0; r <= site.rows; r++) {
+      ctx.beginPath(); ctx.moveTo(0, r * tile + .5); ctx.lineTo(site.cols * tile, r * tile + .5); ctx.stroke();
+    }
+    for (let c = 0; c <= site.cols; c++) {
+      ctx.beginPath(); ctx.moveTo(c * tile + .5, 0); ctx.lineTo(c * tile + .5, site.rows * tile); ctx.stroke();
+    }
+    // outer boundary, bright, so the edge of the buildable area is obvious while panned out
+    ctx.strokeStyle = '#454f58';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, site.cols * tile - 2, site.rows * tile - 2);
+
+    // draw belts first (floor-level), then stations on top
+    for (const b of site.buildings) if (b.kind === 'belt') this.drawBelt(b);
+    for (const b of site.buildings) if (b.kind !== 'belt') this.drawStation(b);
+
+    // ambient day/night lighting wash — drawn in screen space so it stays
+    // uniform across the whole viewport regardless of pan/zoom
+    const hourFloat = getGameHourFloat();
+    const nightAlpha = getNightAlpha(hourFloat);
+    const dawnDuskAlpha = getDawnDuskAlpha(hourFloat);
+    if (nightAlpha > 0.01 || dawnDuskAlpha > 0.01) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (nightAlpha > 0.01) {
+        ctx.fillStyle = `rgba(8,12,26,${nightAlpha.toFixed(2)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      if (dawnDuskAlpha > 0.01) {
+        ctx.fillStyle = `rgba(240,150,80,${dawnDuskAlpha.toFixed(2)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  },
+  drawStation(b) {
+    if (b.kind === 'machine') return this.drawMachine(b);
+    if (b.kind === 'depot') return this.drawDepot(b);
+    if (b.kind === 'warehouse') return this.drawWarehouse(b);
+    if (b.kind === 'technician') return this.drawTechnician(b);
+  },
+  drawBelt(b) {
+    const { ctx } = this;
+    const { tile } = CONFIG.grid;
+    const x = b.col * tile, y = b.row * tile;
+    const selected = State.selectedBuilding === b;
+    const stalled = !!(b.item && b.item.progress >= 1);
+
+    // Whole-tile pulsing warning wash for a jammed belt — visible at a glance
+    // across the whole floor, before the player has to click anything.
+    if (stalled) {
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 220);
+      ctx.fillStyle = `rgba(227,93,82,${(0.12 + 0.22 * pulse).toFixed(2)})`;
+      ctx.fillRect(x, y, tile, tile);
+    }
+
+    ctx.fillStyle = '#20262b';
+    ctx.fillRect(x + 9, y + 9, tile - 18, tile - 18);
+    ctx.strokeStyle = stalled ? '#e35d52' : (selected ? '#f0a030' : '#333c44');
+    ctx.lineWidth = stalled ? 2.5 : (selected ? 2.5 : 1);
+    ctx.strokeRect(x + 9.5, y + 9.5, tile - 19, tile - 19);
+
+    const cx = x + tile / 2, cy = y + tile / 2;
+    const d = DIRS[b.dir];
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.atan2(d.dy, d.dx));
+    ctx.fillStyle = '#5a636c';
+    ctx.beginPath();
+    ctx.moveTo(9, 0); ctx.lineTo(-5, -6); ctx.lineTo(-5, 6); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    if (b.item) {
+      const t = Math.min(b.item.progress, 1);
+      const ix = cx + d.dx * tile * (t - 0.5);
+      const iy = cy + d.dy * tile * (t - 0.5);
+      const color = CONFIG.parts[b.item.type] ? CONFIG.parts[b.item.type].color : '#9aa4ad';
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(ix, iy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = stalled ? '#e35d52' : '#15181c';
+      ctx.lineWidth = stalled ? 2 : 1.5;
+      ctx.stroke();
+    }
+  },
+  drawDepot(b) {
+    const { ctx } = this;
+    const { tile } = CONFIG.grid;
+    const x = b.col * tile, y = b.row * tile, pad = 6;
+    const selected = State.selectedBuilding === b;
+    ctx.fillStyle = '#262c31';
+    ctx.strokeStyle = selected ? '#f0a030' : '#3a4149';
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    roundRect(ctx, x + pad, y + pad, tile - pad * 2, tile - pad * 2, 6);
+    ctx.fill(); ctx.stroke();
+
+    const cx = x + tile / 2, cy = y + tile / 2 - 3;
+    ctx.fillStyle = '#8b939c';
+    ctx.beginPath(); ctx.arc(cx, cy - 6, 12, Math.PI, 0); ctx.fill();
+    ctx.fillRect(cx - 12, cy - 6, 24, 16);
+    ctx.fillStyle = '#c8ccd0';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(Lang.t('depotFloorLabel'), cx, y + tile - pad - 4);
+    if (!hasAdjacentBelt(Sites.current(), b.row, b.col)) {
+      ctx.fillStyle = '#f0a030';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText('!', x + pad + 7, y + pad + 11);
+    }
+  },
+  drawWarehouse(b) {
+    const { ctx } = this;
+    const { tile } = CONFIG.grid;
+    const x = b.col * tile, y = b.row * tile, pad = 6;
+    const selected = State.selectedBuilding === b;
+    ctx.fillStyle = '#262c31';
+    ctx.strokeStyle = selected ? '#f0a030' : '#3a4149';
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    roundRect(ctx, x + pad, y + pad, tile - pad * 2, tile - pad * 2, 6);
+    ctx.fill(); ctx.stroke();
+
+    const cx = x + tile / 2, cy = y + tile / 2 - 3;
+    ctx.fillStyle = '#c8ccd0';
+    ctx.fillRect(cx - 13, cy - 10, 26, 20);
+    ctx.strokeStyle = '#15181c';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - 13, cy); ctx.lineTo(cx + 13, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10); ctx.stroke();
+    ctx.fillStyle = '#c8ccd0';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(Lang.t('warehouseFloorLabel'), cx, y + tile - pad - 4);
+  },
+  drawMachine(m) {
+    const { ctx } = this;
+    const { tile } = CONFIG.grid;
+    const x = m.col * tile, y = m.row * tile;
+    const pad = 6;
+    const selected = State.selectedBuilding === m;
+
+    // floor-level safety marking around the equipment footprint
+    drawHazardBorder(ctx, x, y, tile, tile);
+
+    // base plate — tints red the more worn the machine is, solid red once broken
+    ctx.fillStyle = m.broken ? '#3a2020' : '#282f36';
+    ctx.strokeStyle = m.broken ? '#e35d52' : (selected ? '#f0a030' : '#3a4149');
+    ctx.lineWidth = m.broken ? 2.5 : (selected ? 2.5 : 1.5);
+    roundRect(ctx, x + pad, y + pad, tile - pad * 2, tile - pad * 2, 6);
+    ctx.fill(); ctx.stroke();
+
+    const cx = x + tile / 2, cy = y + tile / 2 - 4;
+
+    // spinning spindle indicator when running
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (m.running) {
+      const t = performance.now() / 1000;
+      ctx.rotate(t * 6);
+    }
+    ctx.fillStyle = m.broken ? '#6b6f74' : m.def.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#15181c';
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2) / 3);
+      ctx.fillRect(-2, -12, 4, 7);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    if (m.broken) {
+      // wrench-and-bang badge — unmissable at a glance
+      ctx.fillStyle = '#e35d52';
+      ctx.font = 'bold 14px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠', cx, y + tile - 20);
+    }
+
+    // waiting-to-unload indicator (produced but no free belt)
+    if (m.outputHeld) {
+      ctx.fillStyle = '#e35d52';
+      ctx.beginPath();
+      ctx.arc(x + tile - pad - 5, y + pad + 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // no belt touching this machine at all — very likely why it's idle
+    if (!hasAdjacentBelt(Sites.current(), m.row, m.col)) {
+      ctx.fillStyle = '#f0a030';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('!', x + pad + 7, y + pad + 11);
+    }
+
+    // level pips
+    ctx.fillStyle = '#f0a030';
+    for (let i = 0; i < m.level; i++) {
+      ctx.fillRect(x + pad + 4 + i * 6, y + tile - pad - 6, 4, 4);
+    }
+
+    // wear bar (top of tile) — green -> amber -> red as it climbs toward breakdown
+    const wbX = x + pad + 4, wbY = y + pad + 2, wbW = tile - pad * 2 - 8;
+    ctx.fillStyle = '#12151a';
+    ctx.fillRect(wbX, wbY, wbW, 3);
+    ctx.fillStyle = m.wear > 75 ? '#e35d52' : (m.wear > 40 ? '#e3b23c' : '#4fbf82');
+    ctx.fillRect(wbX, wbY, wbW * (m.wear / 100), 3);
+
+    // progress bar (bottom of tile)
+    const barW = tile - pad * 2 - 8;
+    const barX = x + pad + 4, barY = y + tile - pad - 14;
+    ctx.fillStyle = '#12151a';
+    ctx.fillRect(barX, barY, barW, 4);
+    ctx.fillStyle = m.running ? '#4fbf82' : '#5a636c';
+    ctx.fillRect(barX, barY, barW * (m.running ? m.progress : 0), 4);
+
+    // label
+    ctx.fillStyle = '#c8ccd0';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(Lang.field(m.def, 'name').split(' ')[1] || Lang.field(m.def, 'name'), cx, y + 24);
+  },
+  drawTechnician(t) {
+    const { ctx } = this;
+    const { tile } = CONFIG.grid;
+    const x = t.col * tile, y = t.row * tile, pad = 6;
+    const selected = State.selectedBuilding === t;
+
+    // repair range ring — only while selected, so it doesn't clutter the floor
+    if (selected) {
+      const cx = x + tile / 2, cy = y + tile / 2;
+      ctx.strokeStyle = 'rgba(200,138,74,0.5)';
+      ctx.fillStyle = 'rgba(200,138,74,0.08)';
+      ctx.lineWidth = 1.5;
+      const r = (t.def.range + 0.5) * tile;
+      ctx.beginPath(); ctx.rect(cx - r, cy - r, r * 2, r * 2); ctx.fill(); ctx.stroke();
+    }
+
+    ctx.fillStyle = '#2b241d';
+    ctx.strokeStyle = selected ? '#f0a030' : '#5a4530';
+    ctx.lineWidth = selected ? 2.5 : 1.5;
+    roundRect(ctx, x + pad, y + pad, tile - pad * 2, tile - pad * 2, 6);
+    ctx.fill(); ctx.stroke();
+
+    const cx = x + tile / 2, cy = y + tile / 2 - 3;
+    const active = !!t.currentTargetId;
+    ctx.strokeStyle = active ? '#c88a4a' : '#6b5a45';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    // simple wrench glyph
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(active ? Math.sin(performance.now() / 180) * 0.35 : -0.4);
+    ctx.beginPath(); ctx.moveTo(-9, 9); ctx.lineTo(9, -9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-9, 9, 3.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(9, -9, 3.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#c8ccd0';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(Lang.t('technicianFloorLabel'), cx, y + tile - pad - 4);
+  },
+};
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+// Yellow/black hazard tape marking, painted on the floor around hazardous equipment.
+function drawHazardBorder(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#e3b23c';
+  ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+  ctx.strokeStyle = '#181a1c';
+  ctx.setLineDash([6, 6]);
+  ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+// Faint dashed lane marking, painted on open walkable floor.
+function drawWalkwayMarking(ctx, x, y, tile) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(210,216,222,0.16)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 6]);
+  const inset = 13;
+  ctx.strokeRect(x + inset, y + inset, tile - inset * 2, tile - inset * 2);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/* ================================================================
+   MODULE: input.js — pointer interactions on the floor
+   ================================================================ */
+const Input = {
+  dragStart: null, // { x, y, camX, camY }
+  moved: false,
+  pinch: null, // { startDist, startZoom, midX, midY }
+  init() {
+    const canvas = Renderer.canvas;
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const site = Sites.current();
+      this.dragStart = { x: e.clientX, y: e.clientY, camX: site.camera.x, camY: site.camera.y };
+      this.moved = false;
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!this.dragStart) return;
+      const dx = e.clientX - this.dragStart.x, dy = e.clientY - this.dragStart.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) this.moved = true;
+      if (this.moved) {
+        const site = Sites.current();
+        site.camera.x = this.dragStart.camX - dx / site.camera.zoom;
+        site.camera.y = this.dragStart.camY - dy / site.camera.zoom;
+        Input.clampCamera(site);
+      }
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (this.dragStart && !this.moved && e.target === canvas) {
+        Input.handleClick(e.clientX, e.clientY);
+      }
+      this.dragStart = null;
+    });
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      Input.cancelAll();
+    });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const site = Sites.current();
+      const rect = canvas.getBoundingClientRect();
+      Input.zoomAt(site, e.clientX - rect.left, e.clientY - rect.top, e.deltaY > 0 ? 0.88 : 1.14);
+    }, { passive: false });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') Input.cancelAll();
+    });
+
+    // Touch: single finger pans/taps exactly like the mouse path above;
+    // two fingers pinch-zoom around their midpoint. touch-action:none in
+    // CSS stops the browser from also scrolling/zooming the page itself.
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const site = Sites.current();
+        this.dragStart = { x: t.clientX, y: t.clientY, camX: site.camera.x, camY: site.camera.y };
+        this.moved = false;
+        this.pinch = null;
+      } else if (e.touches.length === 2) {
+        this.dragStart = null; // a second finger landed — abandon any pan/tap in progress
+        this.pinch = Input.startPinch(e.touches);
+      }
+    }, { passive: true });
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && this.pinch) {
+        e.preventDefault();
+        Input.updatePinch(e.touches);
+      } else if (e.touches.length === 1 && this.dragStart) {
+        e.preventDefault();
+        const t = e.touches[0];
+        const dx = t.clientX - this.dragStart.x, dy = t.clientY - this.dragStart.y;
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) this.moved = true;
+        if (this.moved) {
+          const site = Sites.current();
+          site.camera.x = this.dragStart.camX - dx / site.camera.zoom;
+          site.camera.y = this.dragStart.camY - dy / site.camera.zoom;
+          Input.clampCamera(site);
+        }
+      }
+    }, { passive: false });
+    canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
+        if (this.dragStart && !this.moved) {
+          const t = e.changedTouches[0];
+          Input.handleClick(t.clientX, t.clientY);
+        }
+        this.dragStart = null;
+        this.pinch = null;
+      } else if (e.touches.length === 1) {
+        // lifted one of two fingers — restart a single-finger pan from here
+        this.pinch = null;
+        const t = e.touches[0];
+        const site = Sites.current();
+        this.dragStart = { x: t.clientX, y: t.clientY, camX: site.camera.x, camY: site.camera.y };
+        this.moved = false;
+      }
+    });
+    canvas.addEventListener('touchcancel', () => { this.dragStart = null; this.pinch = null; });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      const c = Renderer.canvas;
+      Input.zoomAt(Sites.current(), c.width / 2, c.height / 2, 1.2);
+    });
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      const c = Renderer.canvas;
+      Input.zoomAt(Sites.current(), c.width / 2, c.height / 2, 0.83);
+    });
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+      const site = Sites.current();
+      site.camera.zoom = 1; site.camera.x = 0; site.camera.y = 0;
+    });
+  },
+  startPinch(touches) {
+    const rect = Renderer.canvas.getBoundingClientRect();
+    const [a, b] = touches;
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    const site = Sites.current();
+    return {
+      startDist: dist || 1,
+      startZoom: site.camera.zoom,
+      midX: (a.clientX + b.clientX) / 2 - rect.left,
+      midY: (a.clientY + b.clientY) / 2 - rect.top,
+    };
+  },
+  updatePinch(touches) {
+    const [a, b] = touches;
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    const site = Sites.current();
+    const targetZoom = Math.min(2.2, Math.max(0.4, this.pinch.startZoom * (dist / this.pinch.startDist)));
+    const factor = targetZoom / site.camera.zoom;
+    Input.zoomAt(site, this.pinch.midX, this.pinch.midY, factor);
+  },
+  handleClick(clientX, clientY) {
+    const site = Sites.current();
+    const rect = Renderer.canvas.getBoundingClientRect();
+    const sx = clientX - rect.left, sy = clientY - rect.top;
+    const wx = sx / site.camera.zoom + site.camera.x;
+    const wy = sy / site.camera.zoom + site.camera.y;
+    const { tile } = CONFIG.grid;
+    const col = Math.floor(wx / tile), row = Math.floor(wy / tile);
+    if (col < 0 || row < 0 || col >= site.cols || row >= site.rows) return;
+
+    const existing = site.grid[row][col];
+    if (State.moveSelection) {
+      Factory.move(State.moveSelection, row, col, site);
+      return;
+    }
+    if (State.buildSelection) {
+      Factory.place(State.buildSelection, row, col, site);
+      // keep tool armed for rapid placement; Esc/right click cancels
+    } else if (existing) {
+      State.selectedBuilding = existing;
+      UI.refreshInspector();
+    } else {
+      State.selectedBuilding = null;
+      UI.refreshInspector();
+    }
+  },
+  zoomAt(site, screenX, screenY, factor) {
+    const worldXBefore = screenX / site.camera.zoom + site.camera.x;
+    const worldYBefore = screenY / site.camera.zoom + site.camera.y;
+    site.camera.zoom = Math.min(2.2, Math.max(0.4, site.camera.zoom * factor));
+    site.camera.x = worldXBefore - screenX / site.camera.zoom;
+    site.camera.y = worldYBefore - screenY / site.camera.zoom;
+    Input.clampCamera(site);
+  },
+  clampCamera(site) {
+    const { tile } = CONFIG.grid;
+    const cam = site.camera;
+    const worldW = site.cols * tile, worldH = site.rows * tile;
+    const viewW = Renderer.canvas.width / cam.zoom, viewH = Renderer.canvas.height / cam.zoom;
+    const margin = tile * 1.5;
+    const minX = -margin, maxX = Math.max(minX, worldW - viewW + margin);
+    const minY = -margin, maxY = Math.max(minY, worldH - viewH + margin);
+    cam.x = Math.min(Math.max(cam.x, minX), maxX);
+    cam.y = Math.min(Math.max(cam.y, minY), maxY);
+  },
+  cancelBuild() {
+    State.buildSelection = null;
+    UI.refreshShop();
+    document.getElementById('floor').classList.remove('placing');
+  },
+  cancelMove() {
+    State.moveSelection = null;
+    document.getElementById('floor').classList.remove('moving');
+    UI.refreshInspector();
+  },
+  cancelAll() {
+    Input.cancelBuild();
+    Input.cancelMove();
+  },
+};
+
+/* ================================================================
+   MODULE: save.js — persistence via artifact window.storage API
+   ================================================================ */
+const SaveSystem = {
+  KEY: 'cnc-factory-save-v3',
+  serialize() {
+    return JSON.stringify({
+      money: State.money,
+      steel: State.steel,
+      day: State.day,
+      reputation: State.reputation,
+      prestigeLevel: State.prestigeLevel,
+      dailyProduced: State.dailyProduced,
+      firstEpochMs: State.firstEpochMs,
+      lastSeenMs: Date.now(), // stamped fresh on every save — this is what we diff against on next load
+      inventory: State.inventory,
+      stats: {
+        totalProducedByPart: State.stats.totalProducedByPart,
+        totalOrdersCompleted: State.stats.totalOrdersCompleted,
+        totalRevenue: State.stats.totalRevenue,
+        totalExpensesPaid: State.stats.totalExpensesPaid,
+        lastExpenseBreakdown: State.stats.lastExpenseBreakdown,
+        expenseHistory: State.stats.expenseHistory,
+      },
+      currentSiteId: State.currentSiteId,
+      unlockedTech: State.unlockedTech,
+      lang: Lang.current,
+      sites: State.sites.map(site => ({
+        id: site.id, name: site.name, cols: site.cols, rows: site.rows, expandCount: site.expandCount,
+        buildings: site.buildings.map(b => ({
+          defId: b.defId, row: b.row, col: b.col,
+          level: b.kind === 'machine' ? b.level : undefined,
+          wear: b.kind === 'machine' ? b.wear : undefined,
+          broken: b.kind === 'machine' ? b.broken : undefined,
+          dir: b.kind === 'belt' ? b.dir : undefined,
+        })),
+      })),
+      orders: [], // orders intentionally not persisted (time-based, would feel stale)
+    });
+  },
+  // Persistence has two backends: window.storage (only exists inside Claude's
+  // artifact preview) and localStorage (every real browser/WebView, including
+  // a TWA-wrapped Play Store build). We try window.storage first so nothing
+  // changes for this file while previewed in Claude, and transparently fall
+  // back to localStorage once it's hosted/packaged on its own — no code
+  // changes needed when moving from one environment to the other.
+  hasClaudeStorage() { return typeof window !== 'undefined' && !!window.storage; },
+  async save(silent) {
+    try {
+      const payload = SaveSystem.serialize();
+      if (SaveSystem.hasClaudeStorage()) {
+        await window.storage.set(SaveSystem.KEY, payload, false);
+      } else if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(SaveSystem.KEY, payload);
+      } else {
+        if (!silent) UI.toast(Lang.t('toastSaveUnavailable'));
+        return;
+      }
+      if (!silent) UI.toast(Lang.t('toastSaved'));
+    } catch (err) {
+      console.error('save error', err);
+      if (!silent) UI.toast(Lang.t('toastSaveFailed'));
+    }
+  },
+  async load() {
+    try {
+      let raw = null;
+      if (SaveSystem.hasClaudeStorage()) {
+        const res = await window.storage.get(SaveSystem.KEY, false);
+        raw = res && res.value;
+      } else if (typeof localStorage !== 'undefined') {
+        raw = localStorage.getItem(SaveSystem.KEY);
+      }
+      if (!raw) return { loaded: false, previousLastSeenMs: null };
+      const data = JSON.parse(raw);
+      State.money = data.money ?? CONFIG.startMoney;
+      State.steel = data.steel ?? CONFIG.startSteel;
+      State.day = data.day ?? 1;
+      State.reputation = data.reputation ?? CONFIG.reputationStart;
+      State.prestigeLevel = data.prestigeLevel ?? 0;
+      State.dailyProduced = data.dailyProduced ?? 0;
+      State.dailyQuota = computeDailyQuota(State.day);
+      State.firstEpochMs = data.firstEpochMs ?? localMidnight(Date.now());
+      const previousLastSeenMs = data.lastSeenMs ?? null;
+      State.lastSeenMs = Date.now();
+      State.inventory = data.inventory ?? State.inventory;
+      if (data.stats) {
+        State.stats.totalProducedByPart = data.stats.totalProducedByPart || State.stats.totalProducedByPart;
+        State.stats.totalOrdersCompleted = data.stats.totalOrdersCompleted || 0;
+        State.stats.totalRevenue = data.stats.totalRevenue || 0;
+        State.stats.totalExpensesPaid = data.stats.totalExpensesPaid || 0;
+        State.stats.lastExpenseBreakdown = data.stats.lastExpenseBreakdown || null;
+        State.stats.expenseHistory = Array.isArray(data.stats.expenseHistory) ? data.stats.expenseHistory : [];
+      }
+
+      State.sites = [];
+      for (const sd of (data.sites || [])) {
+        const site = {
+          id: sd.id, name: sd.name, cols: sd.cols, rows: sd.rows,
+          grid: [], buildings: [], camera: { x: 0, y: 0, zoom: 1 },
+          expandCount: sd.expandCount || 0,
+        };
+        Sites.initGrid(site);
+        for (const bd of (sd.buildings || [])) {
+          if (!CONFIG.buildables[bd.defId]) continue; // ignore unknown ids from older saves
+          const b = Factory.create(bd.defId, bd.row, bd.col);
+          if (b.kind === 'machine' && bd.level) b.level = bd.level;
+          if (b.kind === 'machine' && typeof bd.wear === 'number') b.wear = bd.wear;
+          if (b.kind === 'machine' && bd.broken) b.broken = true;
+          if (b.kind === 'belt' && bd.dir) b.dir = bd.dir;
+          site.grid[bd.row][bd.col] = b;
+          site.buildings.push(b);
+        }
+        State.sites.push(site);
+        State.nextSiteId = Math.max(State.nextSiteId, sd.id + 1);
+      }
+      State.currentSiteId = data.currentSiteId ?? (State.sites[0] && State.sites[0].id);
+      State.unlockedTech = Array.isArray(data.unlockedTech) ? data.unlockedTech : [];
+      Lang.current = (data.lang === 'en') ? 'en' : 'tr';
+      document.documentElement.lang = Lang.current;
+      if (State.sites.length === 0) return { loaded: false, previousLastSeenMs: null }; // corrupt/empty save, fall back to fresh start
+      UI.toast(Lang.t('toastLoaded'));
+      return { loaded: true, previousLastSeenMs };
+    } catch (err) {
+      // no save yet, or parse issue — start fresh silently
+      console.log('no save found or load error', err);
+      return { loaded: false, previousLastSeenMs: null };
+    }
+  },
+};
+
+/* ================================================================
+   MODULE: ui.js — DOM rendering for sidebar / topbar / toast
+   ================================================================ */
+const UI = {
+  toastTimer: null,
+  init() {
+    UI.applyStaticText();
+    document.getElementById('btn-lang').addEventListener('click', () => Lang.toggle());
+    document.getElementById('btn-save').addEventListener('click', () => SaveSystem.save(false));
+    document.querySelectorAll('[data-buy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const qty = parseInt(btn.dataset.buy, 10);
+        Economy.buySteel(qty, qty * CONFIG.steelUnitCost);
+      });
+    });
+    UI.refreshQuickBuy();
+    // Delegated listener: survives frequent re-renders of #orders-list,
+    // unlike per-button listeners which get destroyed/recreated on rebuild.
+    document.getElementById('orders-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn || btn.disabled) return;
+      const card = e.target.closest('.order-card');
+      if (!card) return;
+      const orderId = parseInt(card.dataset.orderId, 10);
+      const order = State.orders.find(o => o.id === orderId);
+      if (order) Orders.fulfill(order);
+    });
+    document.getElementById('inventory-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('.bulk-sell-btn');
+      if (!btn || btn.disabled) return;
+      Economy.bulkSell(btn.dataset.sell);
+    });
+    document.getElementById('btn-expand').addEventListener('click', () => Sites.expand(Sites.current()));
+    document.getElementById('btn-stats').addEventListener('click', () => UI.toggleStats(true));
+    document.getElementById('btn-stats-close').addEventListener('click', () => UI.toggleStats(false));
+    document.getElementById('stats-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'stats-modal') UI.toggleStats(false);
+    });
+    document.getElementById('btn-tech').addEventListener('click', () => { UI.refreshTechPanel(); UI.toggleModal('tech-modal', true); });
+    document.getElementById('btn-tech-close').addEventListener('click', () => UI.toggleModal('tech-modal', false));
+    document.getElementById('tech-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'tech-modal') UI.toggleModal('tech-modal', false);
+    });
+    document.getElementById('btn-welcome-close').addEventListener('click', () => UI.toggleModal('welcome-modal', false));
+    document.getElementById('btn-welcome-continue').addEventListener('click', () => UI.toggleModal('welcome-modal', false));
+    document.getElementById('tech-tiers').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tech-research-btn');
+      if (!btn || btn.disabled) return;
+      Tech.research(btn.dataset.techId);
+    });
+    document.getElementById('btn-toggle-build').addEventListener('click', () => UI.toggleModal('build-modal', true));
+    document.getElementById('btn-build-close').addEventListener('click', () => UI.toggleModal('build-modal', false));
+    document.getElementById('build-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'build-modal') UI.toggleModal('build-modal', false);
+    });
+    document.getElementById('btn-toggle-inventory').addEventListener('click', () => UI.toggleModal('inventory-modal', true));
+    document.getElementById('btn-inventory-close').addEventListener('click', () => UI.toggleModal('inventory-modal', false));
+    document.getElementById('inventory-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'inventory-modal') UI.toggleModal('inventory-modal', false);
+    });
+    UI.refreshStatsLegend();
+    document.getElementById('site-tabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.id === 'btn-new-site') { if (!btn.disabled) Sites.addNew(); return; }
+      const siteId = btn.dataset.siteId;
+      if (siteId) Sites.switchTo(parseInt(siteId, 10));
+    });
+    this.buildShop();
+    this.refreshTopbar();
+    this.refreshInventory();
+    this.refreshOrders();
+    this.refreshInspector();
+    this.refreshSiteTabs();
+    this.refreshSitePanel();
+    this.refreshQuotaPanel();
+  },
+  toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  },
+  // Shows several toasts one after another instead of clobbering each other —
+  // used for end-of-day summaries where quota/expenses/prestige can all fire at once.
+  toastSequence(messages, gapMs = 2600) {
+    messages.forEach((msg, i) => setTimeout(() => UI.toast(msg), i * gapMs));
+  },
+  // Sets textContent on every element tagged data-i18n to its translation —
+  // covers static labels that don't get rebuilt by a refresh* function.
+  applyStaticText() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = Lang.t(el.dataset.i18n);
+    });
+    const langBtn = document.getElementById('btn-lang');
+    if (langBtn) langBtn.textContent = `🌐 ${Lang.t('btnLang')}`;
+  },
+  // Re-runs every dynamic render function — called right after a language
+  // switch so all currently-visible content (not just static labels) updates.
+  refreshAll() {
+    UI.refreshTopbar();
+    UI.buildShop();
+    UI.refreshInventory();
+    UI.refreshOrders();
+    UI.refreshInspector();
+    UI.refreshSiteTabs();
+    UI.refreshSitePanel();
+    UI.refreshQuotaPanel();
+    if (!document.getElementById('stats-modal').classList.contains('hidden')) {
+      UI.refreshStatsSummary();
+      UI.refreshExpensesSummary();
+      UI.drawStatsChart();
+    }
+    if (!document.getElementById('tech-modal').classList.contains('hidden')) {
+      UI.refreshTechPanel();
+    }
+  },
+  refreshTopbar() {
+    document.getElementById('stat-money').textContent = '$' + Lang.money(State.money);
+    document.getElementById('stat-steel').textContent = State.steel;
+    document.getElementById('stat-day').textContent = State.day;
+    const nowDate = new Date();
+    const hh = nowDate.getHours();
+    const mm = nowDate.getMinutes();
+    document.getElementById('stat-clock').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    const shift = getShift(getGameHourFloat());
+    const shiftEl = document.getElementById('stat-shift');
+    shiftEl.textContent = `${shift.icon} ${shift.short}`;
+    shiftEl.style.color = shift.color;
+    UI.refreshQuickBuy();
+  },
+  refreshQuickBuy() {
+    document.querySelectorAll('.quick-buy-btn[data-buy]').forEach(btn => {
+      const qty = parseInt(btn.dataset.buy, 10);
+      const cost = qty * CONFIG.steelUnitCost;
+      btn.querySelector('small').textContent = '$' + Lang.money(cost);
+      btn.disabled = !Economy.canAfford(cost);
+    });
+  },
+  toggleModal(id, show) {
+    document.getElementById(id).classList.toggle('hidden', !show);
+  },
+  showOfflineOverlay() { UI.toggleModal('offline-overlay', true); },
+  hideOfflineOverlay() { UI.toggleModal('offline-overlay', false); },
+  // Formats a millisecond duration as a single friendly unit — minutes for
+  // short gaps, hours for a work-day-ish absence, days for longer ones.
+  formatDuration(ms) {
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return Lang.t('durationMinutes', { n: Math.max(1, mins) });
+    const hours = Math.round(ms / 3600000);
+    if (hours < 48) return Lang.t('durationHours', { n: hours });
+    return Lang.t('durationDays', { n: Math.round(ms / 86400000) });
+  },
+  showWelcomeBackSummary(summary) {
+    const body = document.getElementById('welcome-body');
+    const row = (label, val, color) => `
+      <div class="welcome-row"><span class="label">${label}</span><span class="val" ${color ? `style="color:${color}"` : ''}>${val}</span></div>
+    `;
+    const producedRows = Object.entries(summary.producedDelta)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => row(Lang.field(CONFIG.parts[k], 'name'), n))
+      .join('');
+    const moneyColor = summary.moneyDelta >= 0 ? 'var(--green)' : 'var(--red)';
+    const repColor = summary.reputationDelta >= 0 ? 'var(--green)' : 'var(--red)';
+    body.innerHTML = `
+      <div class="welcome-intro">${Lang.t('welcomeBackIntro', { duration: UI.formatDuration(summary.elapsedMs) })}</div>
+      ${summary.daysPassed > 0 ? row(Lang.t('welcomeBackDays'), summary.daysPassed) : ''}
+      ${producedRows}
+      ${row(Lang.t('welcomeBackOrders'), summary.ordersCompletedDelta)}
+      ${row(Lang.t('welcomeBackRevenue'), `+$${Lang.money(summary.revenueDelta)}`, 'var(--green)')}
+      ${row(Lang.t('welcomeBackMoney'), `${summary.moneyDelta >= 0 ? '+' : ''}$${Lang.money(summary.moneyDelta)}`, moneyColor)}
+      ${row(Lang.t('welcomeBackReputation'), `${summary.reputationDelta >= 0 ? '+' : ''}${Math.round(summary.reputationDelta)}`, repColor)}
+    `;
+    UI.toggleModal('welcome-modal', true);
+  },
+  toggleStats(show) {
+    const modal = document.getElementById('stats-modal');
+    if (show) {
+      modal.classList.remove('hidden');
+      UI.refreshStatsSummary();
+      UI.refreshExpensesSummary();
+      UI.drawStatsChart();
+    } else {
+      modal.classList.add('hidden');
+    }
+  },
+  refreshStatsLegend() {
+    const el = document.getElementById('stats-legend');
+    const dot = (color) => `<span style="width:10px;height:10px;border-radius:2px;background:${color};display:inline-block;"></span>`;
+    el.innerHTML = Object.values(CONFIG.parts).map(p => `
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);">${dot(p.color)}${p.name}</span>
+    `).join('') + `
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);">
+        <span style="width:14px;height:2px;background:#e7e6e1;display:inline-block;"></span>Toplam
+      </span>
+    `;
+  },
+  refreshStatsSummary() {
+    const el = document.getElementById('stats-summary');
+    const s = State.stats;
+    const rows = Object.entries(CONFIG.parts).map(([k, p]) => `
+      <div class="inv-row">
+        <span class="part-name"><span class="dot" style="background:${p.color}"></span>${Lang.field(p, 'name')}</span>
+        <span class="qty">${s.totalProducedByPart[k] || 0} ${Lang.t('totalProducedRow')}</span>
+      </div>
+    `).join('');
+    el.innerHTML = `
+      ${rows}
+      <div class="inv-row"><span>${Lang.t('completedOrders')}</span><span class="qty">${s.totalOrdersCompleted}</span></div>
+      <div class="inv-row"><span>${Lang.t('totalOrderRevenue')}</span><span class="qty" style="color:var(--green)">$${Lang.money(s.totalRevenue)}</span></div>
+      <div class="inv-row"><span>${Lang.t('gameDay')}</span><span class="qty">${State.day}</span></div>
+      <div class="inv-row"><span>${Lang.t('reputation')}</span><span class="qty">${Math.round(State.reputation)}/100${State.prestigeLevel > 0 ? ` (${Lang.t('prestigeLabel')} ${State.prestigeLevel})` : ''}</span></div>
+      <div class="inv-row"><span>${Lang.t('activeSites')}</span><span class="qty">${State.sites.length}</span></div>
+    `;
+  },
+  refreshExpensesSummary() {
+    const el = document.getElementById('expenses-summary');
+    const b = State.stats.lastExpenseBreakdown;
+    if (!b) {
+      el.innerHTML = `<div class="expense-group-label">${Lang.t('expensesTitle')}</div><div class="empty-note">${Lang.t('expensesNoneYet')}</div>`;
+      return;
+    }
+    const row = (label, value, color) => `
+      <div class="inv-row"><span>${label}</span><span class="qty" ${color ? `style="color:${color}"` : ''}>$${value.toFixed(0)}</span></div>
+    `;
+    const ppeRows = Object.entries(CONFIG.expenseRates.ppe).map(([key, def]) => row(Lang.field(def, 'label'), b.ppe[key])).join('');
+    el.innerHTML = `
+      <div class="expense-group-label">${Lang.t('expensesLastDay')} (${Lang.t('labelDay')} ${State.day - 1} · ${b.workerCount} ${Lang.t('expensesWorkersMachines')}, ${b.machineCount} ${Lang.t('expensesMachinesWord')})</div>
+      ${row(Lang.t('expenseElectricity'), b.electricity)}
+      ${row(Lang.t('expenseWater'), b.water)}
+      ${row(Lang.t('expenseSalary'), b.salary)}
+      ${row(Lang.t('expenseMeals'), b.meals)}
+      ${row(Lang.t('expenseTransport'), b.transport)}
+      <div class="expense-group-label">${Lang.t('ppeGroup')}</div>
+      ${ppeRows}
+      <div class="expense-total-row"><span>${Lang.t('expenseTotal')}</span><span style="color:var(--red)">$${Lang.money(b.total)}</span></div>
+      <div class="inv-row" style="margin-top:6px;"><span>${Lang.t('expenseCumulative')}</span><span class="qty" style="color:var(--red)">$${Lang.money(State.stats.totalExpensesPaid)}</span></div>
+    `;
+  },
+  refreshTechPanel() {
+    const el = document.getElementById('tech-tiers');
+    const tiers = [...new Set(CONFIG.techTree.map(t => t.tier))].sort((a, b) => a - b);
+    el.innerHTML = tiers.map(tier => {
+      const nodes = CONFIG.techTree.filter(t => t.tier === tier);
+      const cards = nodes.map(node => {
+        const unlocked = Tech.isUnlocked(node.id);
+        const reqNames = node.requires.map(r => Lang.field(CONFIG.techTree.find(t => t.id === r), 'name') || r);
+        const reqMet = node.requires.every(r => Tech.isUnlocked(r));
+        const affordable = Economy.canAfford(node.cost);
+        let btnLabel = `${Lang.t('techResearchBtn')} $${Lang.money(node.cost)}`;
+        let btnDisabled = unlocked || !reqMet || !affordable;
+        return `
+          <div class="tech-card ${unlocked ? 'unlocked' : (!reqMet ? 'locked-req' : '')}">
+            <div class="tech-name">${unlocked ? '✓' : (reqMet ? '🔓' : '🔒')} ${Lang.field(node, 'name')}</div>
+            <div class="tech-desc">${Lang.field(node, 'desc')}</div>
+            ${reqNames.length ? `<div class="tech-req">${Lang.t('techRequired')}: ${reqNames.join(', ')}</div>` : ''}
+            ${unlocked
+              ? `<span class="unlocked-badge">${Lang.t('techResearched')}</span>`
+              : `<button class="tech-research-btn" data-tech-id="${node.id}" ${btnDisabled ? 'disabled' : ''}>${btnLabel}</button>`
+            }
+          </div>
+        `;
+      }).join('');
+      return `
+        <div class="tech-tier">
+          <div class="tech-tier-label">${Lang.t('techTier')} ${tier}</div>
+          <div class="tech-grid">${cards}</div>
+        </div>
+      `;
+    }).join('');
+  },
+  drawStatsChart() {
+    const canvas = document.getElementById('stats-canvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const history = State.stats.history;
+    const padL = 42, padR = 12, padT = 12, padB = 24;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+
+    if (history.length < 2) {
+      ctx.fillStyle = '#8b939c';
+      ctx.textAlign = 'center';
+      ctx.font = '11px JetBrains Mono';
+      ctx.fillText(Lang.t('statsWaiting'), w / 2, h / 2);
+      return;
+    }
+
+    const maxVal = Math.max(6, ...history.map(s => s.total)) * 1.15;
+    const ySteps = 4;
+    ctx.strokeStyle = '#333c44'; ctx.lineWidth = 1;
+    ctx.fillStyle = '#8b939c'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'right';
+    for (let i = 0; i <= ySteps; i++) {
+      const y = padT + plotH - (plotH * i) / ySteps;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillText(Math.round((maxVal * i) / ySteps), padL - 6, y + 3);
+    }
+
+    const xStep = plotW / (CONFIG.statsMaxSamples - 1);
+    const startIdx = CONFIG.statsMaxSamples - history.length;
+    const xFor = (i) => padL + (startIdx + i) * xStep;
+    const yFor = (v) => padT + plotH - (v / maxVal) * plotH;
+
+    for (const key of Object.keys(CONFIG.parts)) {
+      ctx.strokeStyle = CONFIG.parts[key].color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      history.forEach((s, i) => {
+        const x = xFor(i), y = yFor(s.rates[key] || 0);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    // total (dashed)
+    ctx.strokeStyle = '#e7e6e1'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    history.forEach((s, i) => {
+      const x = xFor(i), y = yFor(s.total);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#8b939c'; ctx.textAlign = 'center'; ctx.font = '9px JetBrains Mono';
+    ctx.fillText(Lang.t('statsChartCaption'), w / 2, h - 6);
+  },
+  refreshQuotaPanel() {
+    document.getElementById('quota-tag').textContent = `${State.dailyProduced}/${State.dailyQuota} ${Lang.t('quotaPartsUnit')}`;
+    const pct = Math.min(100, (State.dailyProduced / Math.max(1, State.dailyQuota)) * 100);
+    const quotaFill = document.getElementById('quota-fill');
+    quotaFill.style.width = pct + '%';
+    quotaFill.style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)';
+
+    const rep = Math.round(State.reputation);
+    const repColor = rep >= 70 ? '#4fbf82' : (rep >= 35 ? '#e3b23c' : '#e35d52');
+    const repEl = document.getElementById('reputation-value');
+    repEl.textContent = `${rep}/100${State.prestigeLevel > 0 ? ` · ${Lang.t('prestigeLabel')} ${State.prestigeLevel}` : ''}`;
+    repEl.style.color = repColor;
+    const repFill = document.getElementById('reputation-fill');
+    repFill.style.width = rep + '%';
+    repFill.style.background = repColor;
+
+    const mult = (0.6 + (State.reputation / 100) * 0.8).toFixed(2);
+    const near = State.reputation >= CONFIG.prestigeThreshold - 5 ? ` · ${Lang.t('veryCloseToPrestige')}` : '';
+    document.getElementById('prestige-note').textContent = `${Lang.t('rewardMultiplier')}: ×${mult}${near}`;
+  },
+  refreshSiteTabs() {
+    const wrap = document.getElementById('site-tabs');
+    const cost = Sites.newSiteCost();
+    const canAddSite = Economy.canAfford(cost);
+    wrap.innerHTML = State.sites.map(site => `
+      <button class="site-tab ${site.id === State.currentSiteId ? 'active' : ''}" data-site-id="${site.id}">${site.name}</button>
+    `).join('') + `<button class="site-tab add" id="btn-new-site" ${canAddSite ? '' : 'disabled'}>+ ${Lang.t('newSite')} ($${Lang.money(cost)})</button>`;
+  },
+  refreshSitePanel() {
+    const site = Sites.current();
+    if (!site) return;
+    document.getElementById('site-size-tag').textContent = `${site.cols}×${site.rows}`;
+    const maxed = Sites.isMaxSize(site);
+    const cost = Sites.expandCost(site);
+    document.getElementById('site-info').textContent = `${site.name} ${Lang.t('siteInfoBuildings', { n: site.buildings.length })}`;
+    const btn = document.getElementById('btn-expand');
+    btn.textContent = maxed ? Lang.t('maxSize') : `${Lang.t('expandSite')} ($${Lang.money(cost)})`;
+    btn.disabled = maxed || !Economy.canAfford(cost);
+  },
+  buildShop() {
+    const list = document.getElementById('shop-list');
+    list.innerHTML = '';
+    let lastGroup = null;
+    CONFIG.shopOrder.forEach(id => {
+      const def = CONFIG.buildables[id];
+      if (def.requiresTech && !Tech.isUnlocked(def.requiresTech)) return; // locked behind research
+      const groupLabel = Lang.field(def, 'group');
+      if (groupLabel !== lastGroup) {
+        lastGroup = groupLabel;
+        const label = document.createElement('div');
+        label.className = 'shop-group-label';
+        label.textContent = groupLabel;
+        list.appendChild(label);
+      }
+      const el = document.createElement('div');
+      el.className = 'shop-item';
+      el.dataset.type = def.id;
+      const extra = def.kind === 'machine' ? ` · ${(def.cycleMs / 1000).toFixed(1)}s` : '';
+      el.innerHTML = `
+        <div class="swatch" style="background:${def.color}"></div>
+        <div class="info">
+          <div class="name">${Lang.field(def, 'name')}</div>
+          <div class="desc">${Lang.field(def, 'desc')}${extra}</div>
+        </div>
+        <div class="price">$${def.cost}</div>
+      `;
+      el.addEventListener('click', () => {
+        State.buildSelection = (State.buildSelection === def.id) ? null : def.id;
+        UI.refreshShop();
+        document.getElementById('floor').classList.toggle('placing', !!State.buildSelection);
+        if (State.buildSelection) UI.toggleModal('build-modal', false); // close so the floor is visible to place on
+      });
+      list.appendChild(el);
+    });
+    this.refreshShop();
+  },
+  refreshShop() {
+    document.querySelectorAll('.shop-item').forEach(el => {
+      const def = CONFIG.buildables[el.dataset.type];
+      el.classList.toggle('selected', State.buildSelection === def.id);
+      el.classList.toggle('disabled', !Economy.canAfford(def.cost));
+    });
+    document.getElementById('shop-hint').textContent = State.buildSelection
+      ? Lang.t('placingHint')
+      : Lang.t('pickHint');
+  },
+  refreshInventory() {
+    const list = document.getElementById('inventory-list');
+    const bulkUnlocked = Tech.isUnlocked('bulk_sell');
+    list.innerHTML = Object.entries(CONFIG.parts).map(([key, part]) => {
+      const qty = State.inventory[key] || 0;
+      const unitPrice = Math.round(part.basePrice * CONFIG.bulkSellRatio);
+      const bulkBtn = bulkUnlocked
+        ? `<button class="bulk-sell-btn" data-sell="${key}" ${qty <= 0 ? 'disabled' : ''}>${Lang.t('bulkSellBtn')} ($${unitPrice}/${Lang.t('totalProducedRow')})</button>`
+        : '';
+      return `
+        <div class="inv-row">
+          <span class="part-name"><span class="dot" style="background:${part.color}"></span>${Lang.field(part, 'name')}</span>
+          <span class="qty">${qty}</span>
+          ${bulkBtn}
+        </div>
+      `;
+    }).join('');
+  },
+  refreshOrders() {
+    document.getElementById('orders-tag').textContent = `${State.orders.length}/${Tech.maxActiveOrders()} ${Lang.t('ordersActive')}`;
+    const list = document.getElementById('orders-list');
+    if (State.orders.length === 0) {
+      list.innerHTML = `<div class="empty-note">${Lang.t('ordersEmpty')}</div>`;
+      return;
+    }
+    const now = Date.now();
+    list.innerHTML = State.orders.map(o => {
+      const elapsed = now - o.createdAt;
+      const remainRatio = Math.max(0, 1 - elapsed / o.duration);
+      const have = State.inventory[o.partType] || 0;
+      const canFulfill = have >= o.qty;
+      const part = CONFIG.parts[o.partType];
+      return `
+        <div class="order-card" data-order-id="${o.id}">
+          <div class="head"><span class="client">${o.client}</span><span class="reward">+$${o.reward}</span></div>
+          <div class="req">${o.qty}x ${Lang.field(part, 'name')} <span style="color:${canFulfill ? '#4fbf82' : '#8b939c'}">${Lang.t('havingQty', { n: have })}</span></div>
+          <div class="timerbar"><div class="fill" style="width:${(remainRatio*100).toFixed(0)}%"></div></div>
+          <button ${canFulfill ? '' : 'disabled'}>${canFulfill ? Lang.t('deliver') : Lang.t('notEnoughParts')}</button>
+        </div>
+      `;
+    }).join('');
+  },
+  refreshInspector() {
+    const el = document.getElementById('inspector');
+    const b = State.selectedBuilding;
+    if (!b) { el.innerHTML = `<div class="none">${Lang.t('noneSelected')}</div>`; return; }
+
+    if (State.moveSelection === b) {
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')}</div>
+        <div class="insp-row"><span>${Lang.t('machineStatus')}</span><b style="color:#f0a030">${Lang.t('moveTitle')}</b></div>
+        <div class="insp-actions">
+          <button id="btn-cancel-move">${Lang.t('cancel')}</button>
+        </div>
+      `;
+      document.getElementById('btn-cancel-move').addEventListener('click', () => Input.cancelMove());
+      return;
+    }
+
+    if (b.kind === 'machine') {
+      const upCost = b.upgradeCost;
+      const canUp = b.canUpgrade();
+      let status = Lang.t('statusIdle'), color = '#8b939c';
+      if (b.broken) { status = Lang.t('statusBroken'); color = '#e35d52'; }
+      else if (b.running) { status = Lang.t('statusRunning'); color = '#4fbf82'; }
+      else if (b.outputHeld) { status = Lang.t('statusBeltWait'); color = '#e35d52'; }
+      else if (!hasAdjacentBelt(Sites.current(), b.row, b.col)) { status = Lang.t('statusNoConn'); color = '#f0a030'; }
+      else if (b.inputBuffer < b.def.steelPerCycle) { status = Lang.t('statusSteelWait'); color = '#8b939c'; }
+      const wearColor = b.wear > 75 ? '#e35d52' : (b.wear > 40 ? '#e3b23c' : '#4fbf82');
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')} · Lv.${b.level}</div>
+        <div class="insp-row"><span>${Lang.t('machineCycle')}</span><b>${(b.cycleMs / 1000).toFixed(2)}s</b></div>
+        <div class="insp-row"><span>${Lang.t('machineOutput')}</span><b>${Lang.field(CONFIG.parts[b.def.outputPart], 'name')}</b></div>
+        <div class="insp-row"><span>${Lang.t('machineInputBuf')}</span><b>${b.inputBuffer}/${CONFIG.machineInputCapacity}</b></div>
+        <div class="insp-row"><span>${Lang.t('machineTotalProduced')}</span><b>${b.totalProduced}</b></div>
+        <div class="insp-row"><span>${Lang.t('machineStatus')}</span><b style="color:${color}">${status}</b></div>
+        <div class="insp-progress"><div class="fill" style="width:${(b.running ? b.progress * 100 : 0).toFixed(0)}%"></div></div>
+        <div class="insp-row"><span>${Lang.t('wear')}</span><b style="color:${wearColor}">${b.wear.toFixed(0)}%</b></div>
+        <div class="insp-wear"><div class="fill" style="width:${b.wear.toFixed(0)}%;background:${wearColor}"></div></div>
+        <div class="insp-actions">
+          <button class="repair" id="btn-repair" ${b.wear <= 0 ? 'disabled' : ''}>${b.wear <= 0 ? Lang.t('sound') : `${Lang.t('repairBtn')} $${b.repairCost}`}</button>
+          <button class="upgrade" id="btn-upgrade" ${canUp ? '' : 'disabled'}>${canUp ? `${Lang.t('upgradeBtn')} $${upCost}` : Lang.t('maxLevelBtn')}</button>
+          <button class="move" id="btn-move">${Lang.t('move')}</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+        </div>
+      `;
+      document.getElementById('btn-repair').addEventListener('click', () => Factory.repair(b));
+      document.getElementById('btn-upgrade').addEventListener('click', () => Factory.upgrade(b));
+      document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
+      document.getElementById('btn-sell').addEventListener('click', () => Factory.sell(b));
+
+    } else if (b.kind === 'belt') {
+      const dirLabel = { right: Lang.t('directionRight'), down: Lang.t('directionDown'), left: Lang.t('directionLeft'), up: Lang.t('directionUp') }[b.dir];
+      const stalled = !!(b.item && b.item.progress >= 1);
+      const itemLabel = b.item ? (Lang.field(CONFIG.parts[b.item.type], 'name') || (Lang.current === 'en' ? 'Steel' : 'Çelik')) : Lang.t('beltEmpty');
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')}</div>
+        <div class="insp-row"><span>${Lang.t('beltDirection')}</span><b>${dirLabel}</b></div>
+        <div class="insp-row"><span>${Lang.t('beltOn')}</span><b>${itemLabel}</b></div>
+        ${stalled ? `<div class="insp-row"><span>${Lang.t('machineStatus')}</span><b style="color:#e35d52">${Lang.t('beltJammed')}</b></div>` : ''}
+        <div class="insp-actions">
+          <button class="upgrade" id="btn-rotate">${Lang.t('rotate')}</button>
+          <button class="move" id="btn-move">${Lang.t('move')}</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+        </div>
+      `;
+      document.getElementById('btn-rotate').addEventListener('click', () => { Factory.rotate(b); UI.refreshInspector(); });
+      document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
+      document.getElementById('btn-sell').addEventListener('click', () => Factory.sell(b));
+
+    } else if (b.kind === 'depot') {
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')}</div>
+        <div class="insp-row"><span>${Lang.t('depotSource')}</span><b>${Lang.t('depotSourceValue')}</b></div>
+        <div class="insp-row"><span>${Lang.t('feedInterval')}</span><b>${(CONFIG.depotFeedMs / 1000).toFixed(1)}s</b></div>
+        <div class="insp-actions">
+          <button class="move" id="btn-move">${Lang.t('move')}</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+        </div>
+      `;
+      document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
+      document.getElementById('btn-sell').addEventListener('click', () => Factory.sell(b));
+
+    } else if (b.kind === 'warehouse') {
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')}</div>
+        <div class="insp-row"><span>${Lang.t('warehouseReceived')}</span><b>${b.totalReceived}</b></div>
+        <div class="insp-actions">
+          <button class="move" id="btn-move">${Lang.t('move')}</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+        </div>
+      `;
+      document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
+      document.getElementById('btn-sell').addEventListener('click', () => Factory.sell(b));
+
+    } else if (b.kind === 'technician') {
+      const target = b.currentTargetId ? Sites.current().buildings.find(x => x.id === b.currentTargetId) : null;
+      el.innerHTML = `
+        <div class="insp-title">${Lang.field(b.def, 'name')}</div>
+        <div class="insp-row"><span>${Lang.t('techRange')}</span><b>${b.def.range} ${Lang.t('cell')}</b></div>
+        <div class="insp-row"><span>${Lang.t('techRate')}</span><b>${b.def.repairRatePerSec}%/s</b></div>
+        <div class="insp-row"><span>${Lang.t('techCurrent')}</span><b style="color:${target ? '#c88a4a' : '#8b939c'}">${target ? `${Lang.field(target.def, 'name')} ${Lang.t('repairingWord')}` : Lang.t('techIdle')}</b></div>
+        <div class="insp-actions">
+          <button class="move" id="btn-move">${Lang.t('move')}</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+        </div>
+      `;
+      document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
+      document.getElementById('btn-sell').addEventListener('click', () => Factory.sell(b));
+    }
+  },
+};
+
+/* ================================================================
+   MODULE: game.js — main loop, ties every module together
+   ================================================================ */
+const Game = {
+  lastTime: 0,
+  lastAutosave: 0,
+  lastUiRefresh: 0,
+  lastStatsSample: 0,
+  uiRefreshMs: 250, // sidebar doesn't need 60fps; frequent full rebuilds also risk swallowing clicks mid-render
+  offlineCatchupActive: false, // read by Orders.tick to force-fulfill orders nobody's around to click
+
+  resolveDayEnd() {
+    const messages = [];
+    const success = State.dailyProduced >= State.dailyQuota;
+    if (success) {
+      State.reputation = Math.min(CONFIG.reputationMax, State.reputation + CONFIG.reputationGainOnSuccess);
+      messages.push(`✓ ${Lang.t('labelDay')} ${State.day} ${Lang.t('quotaMet')} (${State.dailyProduced}/${State.dailyQuota}) ${Lang.t('reputationUp')}`);
+    } else {
+      State.reputation = Math.max(CONFIG.reputationMin, State.reputation - CONFIG.reputationLossOnFailure);
+      messages.push(`✗ ${Lang.t('labelDay')} ${State.day} ${Lang.t('quotaMissed')} (${State.dailyProduced}/${State.dailyQuota}) ${Lang.t('reputationDown')}`);
+    }
+
+    // must run before dailyProduced resets — electricity cost depends on it
+    const { owed, shortfall } = Expenses.applyDaily();
+    if (shortfall > 0) {
+      messages.push(`⚠ ${Lang.t('expensesPaidPartial')} (${Lang.t('debtOf')}: $${Lang.money(owed)}, ${Lang.t('couldNotCover')}: $${Lang.money(shortfall)}) ${Lang.t('reputationDown')}`);
+    } else {
+      messages.push(`💸 ${Lang.t('expensesPaidFull')}: $${Lang.money(owed)} (${Lang.t('seeStats')})`);
+    }
+
+    if (State.reputation >= CONFIG.prestigeThreshold) {
+      State.prestigeLevel += 1;
+      const bonus = CONFIG.prestigeCashRewardBase * State.prestigeLevel;
+      Economy.earn(bonus);
+      State.reputation = CONFIG.prestigeResetReputation;
+      messages.push(`🏆 ${Lang.t('prestigeToast')} ${State.prestigeLevel}! +$${Lang.money(bonus)} ${Lang.t('prestigeBonus')} ${CONFIG.prestigeResetReputation}${Lang.t('prestigeReset')}`);
+    }
+
+    State.day += 1;
+    State.dailyProduced = 0;
+    State.dailyQuota = computeDailyQuota(State.day);
+
+    UI.toastSequence(messages);
+  },
+
+  // Replays every Logistics/Orders tick that *would* have happened between
+  // previousLastSeenMs and now, using the exact same code as live play —
+  // just compressed into large synchronous steps with no rendering. This is
+  // what makes production/orders/day-resolution keep happening while the
+  // game is closed: we don't track time while away, we reconstruct it
+  // afterwards from the wall-clock gap.
+  catchUpOffline(previousLastSeenMs) {
+    if (!previousLastSeenMs) return null;
+    const nowMs = Date.now();
+    const elapsed = nowMs - previousLastSeenMs;
+    if (elapsed < CONFIG.offlineMinGapMs) return null;
+
+    const before = {
+      money: State.money,
+      day: State.day,
+      reputation: State.reputation,
+      revenue: State.stats.totalRevenue,
+      produced: { ...State.stats.totalProducedByPart },
+      ordersCompleted: State.stats.totalOrdersCompleted,
+    };
+
+    // Stub out the UI's DOM-writing methods for the duration of the replay —
+    // it reuses Economy/Factory/Logistics code that normally updates the
+    // screen on every change, but there's no visible screen yet and doing
+    // real DOM writes hundreds of thousands of times would be needlessly
+    // slow. Restored (and given one real refresh) right after.
+    const stubbedNames = [
+      'toast', 'toastSequence', 'refreshTopbar', 'refreshInventory', 'refreshOrders',
+      'refreshInspector', 'refreshSitePanel', 'refreshSiteTabs', 'refreshQuotaPanel',
+      'refreshShop', 'refreshQuickBuy', 'refreshStatsSummary', 'refreshExpensesSummary',
+    ];
+    const originals = {};
+    stubbedNames.forEach(name => { originals[name] = UI[name]; UI[name] = () => {}; });
+
+    Game.offlineCatchupActive = true;
+    State.lastOrderSpawn = previousLastSeenMs;
+    try {
+      const stepMs = Math.min(CONFIG.offlineStepMaxMs, Math.max(CONFIG.offlineStepMinMs, elapsed / CONFIG.offlineMaxIterations));
+      let simClock = previousLastSeenMs;
+      while (simClock < nowMs) {
+        const step = Math.min(stepMs, nowMs - simClock);
+        simClock += step;
+        Logistics.tick(step);
+        Orders.tick(simClock);
+        const dayIdx = computeGameDayIndex(simClock);
+        while (dayIdx > State.day) Game.resolveDayEnd();
+      }
+    } finally {
+      stubbedNames.forEach(name => { UI[name] = originals[name]; });
+      Game.offlineCatchupActive = false;
+    }
+
+    return {
+      elapsedMs: elapsed,
+      daysPassed: State.day - before.day,
+      moneyDelta: State.money - before.money,
+      revenueDelta: State.stats.totalRevenue - before.revenue,
+      reputationDelta: State.reputation - before.reputation,
+      producedDelta: Object.fromEntries(
+        Object.keys(before.produced).map(k => [k, (State.stats.totalProducedByPart[k] || 0) - before.produced[k]])
+      ),
+      ordersCompletedDelta: State.stats.totalOrdersCompleted - before.ordersCompleted,
+    };
+  },
+
+  async start() {
+    Renderer.init();
+    const { loaded, previousLastSeenMs } = await SaveSystem.load();
+    if (!loaded) {
+      State.firstEpochMs = localMidnight(Date.now());
+      const site = Sites.create(Lang.t('mainSiteName'));
+      State.sites.push(site);
+      State.currentSiteId = site.id;
+    }
+    Input.init();
+    UI.init();
+
+    if (loaded && previousLastSeenMs) {
+      const gapMs = Date.now() - previousLastSeenMs;
+      if (gapMs >= CONFIG.offlineMinGapMs) {
+        UI.showOfflineOverlay();
+        // let the overlay actually paint before the (possibly heavy) synchronous replay runs
+        await new Promise(resolve => setTimeout(resolve, 30));
+        const summary = Game.catchUpOffline(previousLastSeenMs);
+        UI.hideOfflineOverlay();
+        UI.refreshAll();
+        if (summary) UI.showWelcomeBackSummary(summary);
+      }
+    }
+
+    State.lastOrderSpawn = Date.now() - randRange(2000, 6000); // spawn one relatively soon
+    this.lastTime = performance.now();
+    this.lastAutosave = this.lastTime;
+    this.lastStatsSample = this.lastTime;
+    requestAnimationFrame(this.loop.bind(this));
+  },
+
+  loop(now) {
+    const dt = Math.min(now - this.lastTime, 200); // clamp for tab-away spikes
+    this.lastTime = now;
+
+    Logistics.tick(dt);
+    Orders.tick(Date.now());
+
+    // Day/clock are derived straight from the wall clock (Date.now()), not
+    // an accumulator — so they're always correct even after the tab was
+    // fully closed, and the displayed clock always matches real time.
+    const currentDayIndex = computeGameDayIndex(Date.now());
+    if (currentDayIndex > State.day) {
+      while (currentDayIndex > State.day) Game.resolveDayEnd();
+      UI.refreshTopbar();
+      UI.refreshQuotaPanel();
+    }
+
+    if (now - this.lastAutosave > CONFIG.autosaveMs) {
+      this.lastAutosave = now;
+      SaveSystem.save(true);
+    }
+
+    if (now - this.lastStatsSample >= CONFIG.statsSampleMs) {
+      const elapsed = now - this.lastStatsSample;
+      this.lastStatsSample = now;
+      const rates = {};
+      let total = 0;
+      for (const k of Object.keys(CONFIG.parts)) {
+        const rate = (State.stats.sinceLastSample[k] / elapsed) * 3600000;
+        rates[k] = rate;
+        total += rate;
+        State.stats.sinceLastSample[k] = 0;
+      }
+      State.stats.history.push({ t: now, rates, total });
+      if (State.stats.history.length > CONFIG.statsMaxSamples) State.stats.history.shift();
+      if (!document.getElementById('stats-modal').classList.contains('hidden')) {
+        UI.refreshStatsSummary();
+        UI.refreshExpensesSummary();
+        UI.drawStatsChart();
+      }
+    }
+
+    Renderer.draw();
+    if (now - this.lastUiRefresh > this.uiRefreshMs) {
+      this.lastUiRefresh = now;
+      UI.refreshTopbar();
+      UI.refreshInventory();
+      UI.refreshOrders();
+      if (State.selectedBuilding) UI.refreshInspector();
+      UI.refreshShop();
+      UI.refreshSitePanel();
+      UI.refreshSiteTabs();
+      UI.refreshQuotaPanel();
+    }
+
+    requestAnimationFrame(this.loop.bind(this));
+  },
+};
+
+// Best-effort "last seen" stamp right before the page actually disappears —
+// covers tab close/refresh/navigation so the next load's offline gap is
+// measured from the true last moment, not just the last periodic autosave.
+window.addEventListener('pagehide', () => { SaveSystem.save(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') SaveSystem.save(true);
+});
+
+// Service worker registration — enables offline play + installability once
+// this file is hosted on a real HTTPS domain (required for TWA/Play Store
+// packaging). Silently no-ops in contexts where it isn't supported/allowed
+// (e.g. this preview), so it never blocks the game from starting.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* not hosted yet — fine, game still runs */ });
+  });
+}
+
+Game.start();
+</script>
+</body>
+</html>

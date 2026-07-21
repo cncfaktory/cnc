@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>CNC Fabrika // Yönetim Simülasyonu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="CNC işleme fabrikanı kur, konveyör hatlarını döşe, siparişleri karşıla, teknoloji ağacında ilerle. Tarayıcıda ücretsiz oyna.">
+<meta name="theme-color" content="#15181c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#15181c; --bg-2:#1c2126; --panel:#20262c; --panel-2:#262d34;
+  --line:#333c44; --line-soft:#2a3138;
+  --text:#e7e6e1; --text-dim:#8b939c;
+  --amber:#f0a030; --amber-dim:#8a5f1e;
+  --green:#4fbf82; --blue:#5aa3d0; --purple:#b06fd8; --gold:#e3b23c; --red:#e35d52;
+  --font-display:'Oswald',sans-serif; --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-mono);line-height:1.6;overflow-x:hidden;}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important; scroll-behavior:auto !important;} }
+
+a{color:inherit;}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px;}
+
+/* ---------- hazard-stripe top bar ---------- */
+.hazard-bar{height:6px;background:repeating-linear-gradient(135deg,var(--amber) 0 18px,#181a1c 18px 36px);}
+
+/* ---------- HERO ---------- */
+header.hero{padding:72px 0 56px;position:relative;}
+.eyebrow{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--amber);display:flex;align-items:center;gap:10px;margin-bottom:22px;
+}
+.eyebrow::before{content:'';width:26px;height:1px;background:var(--amber-dim);display:inline-block;}
+h1.title{
+  font-family:var(--font-display);font-weight:700;letter-spacing:.01em;
+  font-size:clamp(40px,7vw,76px);line-height:1.02;margin:0 0 18px 0;color:var(--text);
+}
+h1.title span{color:var(--amber);}
+.tagline{font-size:16px;color:var(--text-dim);max-width:520px;margin:0 0 34px 0;}
+.tagline b{color:var(--text);font-weight:600;}
+
+.cta-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.btn-play{
+  position:relative;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.03em;
+  color:#1a1400;background:var(--amber);border:none;border-radius:5px;padding:17px 30px;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:10px;
+  box-shadow:0 0 0 3px var(--amber-dim),0 14px 30px -10px rgba(240,160,48,0.45);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.btn-play:hover{transform:translateY(-2px);box-shadow:0 0 0 3px var(--amber-dim),0 18px 34px -8px rgba(240,160,48,0.6);}
+.btn-play .bolt{width:9px;height:9px;border-radius:50%;background:#1a1400;animation:pulse-dot 1.6s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:.35;}50%{opacity:1;}}
+.cta-note{font-size:12px;color:var(--text-dim);}
+.cta-note b{color:var(--green);}
+
+.chip-field{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:-1;}
+.chip{position:absolute;width:9px;height:9px;border-radius:2px;opacity:.5;animation:drift 9s ease-in-out infinite;}
+@keyframes drift{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+
+/* ---------- SECTION HEADERS ---------- */
+.section{padding:64px 0;border-top:1px solid var(--line-soft);}
+.section-head{margin-bottom:40px;}
+.section-tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;}
+h2.section-title{font-family:var(--font-display);font-size:clamp(24px,4vw,32px);margin:0;color:var(--text);font-weight:600;}
+
+/* ---------- PRODUCTION LINE (how to play) ---------- */
+.line{display:flex;flex-direction:column;position:relative;}
+.line-step{
+  display:grid;grid-template-columns:56px 1fr;gap:20px;padding:22px 0;
+  border-bottom:1px dashed var(--line-soft);position:relative;
+}
+.line-step:last-child{border-bottom:none;}
+.line-num{
+  font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--amber);
+  display:flex;align-items:flex-start;justify-content:center;padding-top:2px;
+}
+.line-body h3{margin:0 0 6px 0;font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--text);}
+.line-body p{margin:0;font-size:13.5px;color:var(--text-dim);max-width:560px;}
+.line::before{
+  content:'';position:absolute;left:27px;top:20px;bottom:20px;width:2px;
+  background:repeating-linear-gradient(var(--line) 0 6px, transparent 6px 12px);
+}
+.belt-dot{
+  position:absolute;left:23px;width:10px;height:10px;border-radius:2px;background:var(--amber);
+  animation:belt-travel 4.5s linear infinite;box-shadow:0 0 8px rgba(240,160,48,.6);
+}
+@keyframes belt-travel{0%{top:0%;}100%{top:100%;}}
+
+/* ---------- FEATURE GRID (station cards) ---------- */
+.station-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+.station-card{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:6px;padding:18px 18px 16px;
+  transition:border-color .15s ease, transform .15s ease;
+}
+.station-card:hover{border-color:var(--amber-dim);transform:translateY(-2px);}
+.station-swatch{width:30px;height:30px;border-radius:4px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.station-card h3{margin:0 0 6px 0;font-family:var(--font-display);font-size:15px;font-weight:600;color:var(--text);}
+.station-card p{margin:0;font-size:12.5px;color:var(--text-dim);}
+
+/* ---------- SCREENSHOT-STYLE MOCK PANEL ---------- */
+.mock{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;
+  box-shadow:0 24px 60px -30px rgba(0,0,0,0.6);
+}
+.mock-topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--panel-2);border-bottom:2px solid var(--amber-dim);font-size:11px;flex-wrap:wrap;}
+.mock-topbar .b{font-family:var(--font-display);font-weight:700;color:var(--amber);letter-spacing:.05em;}
+.mock-stat{color:var(--text-dim);}
+.mock-stat b{color:var(--text);}
+.mock-floor{
+  height:220px;background:
+    linear-gradient(var(--bg-2) 1px,transparent 1px),
+    linear-gradient(90deg,var(--bg-2) 1px,transparent 1px);
+  background-size:34px 34px;background-color:#1a2025;position:relative;
+}
+.mock-machine{
+  position:absolute;width:52px;height:52px;border-radius:6px;background:var(--panel-2);border:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+}
+.mock-machine .core{width:22px;height:22px;border-radius:50%;animation:spin 3s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.mock-belt-item{position:absolute;width:11px;height:11px;border-radius:2px;background:var(--blue);animation:belt-h 3s linear infinite;}
+@keyframes belt-h{0%{left:0%;}100%{left:88%;}}
+
+/* ---------- FOOTER ---------- */
+footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
+.footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer-brand{font-family:var(--font-display);font-weight:600;color:var(--text-dim);font-size:13px;}
+.footer-cta{
+  font-family:var(--font-mono);font-size:12px;color:var(--amber);text-decoration:none;
+  border:1px solid var(--amber-dim);border-radius:4px;padding:9px 16px;
+}
+.footer-cta:hover{border-color:var(--amber);}
+.footnote{margin-top:20px;font-size:11px;color:#5a636c;}
+
+@media (max-width:640px){
+  header.hero{padding:52px 0 40px;}
+  .section{padding:48px 0;}
+  .line-step{grid-template-columns:40px 1fr;gap:14px;}
+  .line::before,.belt-dot{left:19px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hazard-bar"></div>
+<div class="chip-field" id="chipField"></div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">ÜRETİM YÖNETİMİ SİMÜLASYONU</div>
+    <h1 class="title">Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.</h1>
+    <p class="tagline">
+      Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla,
+      teknoloji ağacında ilerle. <b>Ücretsiz</b> oynanır.
+    </p>
+    <div class="cta-row">
+      <a class="btn-play" href="cnc-factory.html">
+        <span class="bolt"></span> Oynamaya Başla
+      </a>
+      <span class="cta-note">İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="section-tag">Üretim Hattı</div>
+        <h2 class="section-title">Nasıl oynanır</h2>
+      </div>
+      <div class="line">
+        <div class="belt-dot" style="animation-delay:0s;"></div>
+        <div class="belt-dot" style="animation-delay:-2.25s;"></div>
+
+        <div class="line-step">
+          <div class="line-num">01</div>
+          <div class="line-body">
+            <h3>Ham Madde İstasyonu kur</h3>
+            <p>Genel çelik stoğunu bantlara besleyen istasyonu zemine yerleştir. Çelik üst çubuktan satın alınır.</p>
+          </div>
+        </div>
+        <div class="line-step">
+          <div class="line-num">02</div>
+          <div class="line-body">
+            <h3>Konveyör bantlarını döşe</h3>
+            <p>Malzemeyi taşıyacak hattı çiz, yönünü ayarla. Yanlış yön ya da dolu hücre bandı tıkar — bunu canlı olarak görürsün.</p>
+          </div>
+        </div>
+        <div class="line-step">
+          <div class="line-num">03</div>
+          <div class="line-body">
+            <h3>CNC makinelerini bağla</h3>
+            <p>Freze, torna, router ya da ileri seviye 5-eksen makineyle çeliği braket, mil, dişli ve gövdeye işle. Makineler zamanla yıpranır, bakım gerektirir.</p>
+          </div>
+        </div>
+        <div class="line-step">
+          <div class="line-num">04</div>
+          <div class="line-body">
+            <h3>Sevkiyat Deposu'na aktar</h3>
+            <p>Biten parçalar depoya ulaşınca satılabilir envantere eklenir. İstersen Ar-Ge ile toplu satış da açabilirsin.</p>
+          </div>
+        </div>
+        <div class="line-step">
+          <div class="line-num">05</div>
+          <div class="line-body">
+            <h3>Siparişleri karşıla, günlük kotayı tut</h3>
+            <p>Gelen müşteri siparişlerini zamanında teslim et, günlük üretim kotanı doldur — itibarın ve kâr marjın buna bağlı.</p>
+          </div>
+        </div>
+        <div class="line-step">
+          <div class="line-num">06</div>
+          <div class="line-body">
+            <h3>Ar-Ge yap, yeni saha aç, büyü</h3>
+            <p>Otomatik sevkiyat, hızlı bantlar ve ileri makineler için araştırma yap; yeterince büyüdüğünde ikinci bir fabrika sahası kur.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="preview">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="section-tag">Fabrika Zemini</div>
+        <h2 class="section-title">Gerçek zamanlı üretim akışı</h2>
+      </div>
+      <div class="mock">
+        <div class="mock-topbar">
+          <span class="b">⚙ CNC FABRİKA</span>
+          <span class="mock-stat">Nakit <b>$12.480</b></span>
+          <span class="mock-stat">Çelik <b>34</b></span>
+          <span class="mock-stat">Gün <b>7</b></span>
+          <span class="mock-stat">🌙 Gece</span>
+        </div>
+        <div class="mock-floor" id="mockFloor"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="section-tag">Sistemler</div>
+        <h2 class="section-title">Yönetecek çok şey var</h2>
+      </div>
+      <div class="station-grid">
+        <div class="station-card">
+          <div class="station-swatch" style="background:#5a636c;">🔗</div>
+          <h3>Lojistik &amp; konveyörler</h3>
+          <p>Malzeme akışını kendin tasarla; tıkanıklıklar canlı olarak zeminde görünür.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#c88a4a;">🔧</div>
+          <h3>Aşınma &amp; bakım</h3>
+          <p>Makineler yıpranır, arızalanır. Teknisyen kulübesiyle otomatik onarım kur.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#8a5f1e;color:#1a1400;">🔬</div>
+          <h3>Ar-Ge ağacı</h3>
+          <p>Toplu satış, otomatik sevkiyat, hızlı bant ve ileri CNC makinesinin kilidini aç.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#4fbf82;color:#0d1a12;">📈</div>
+          <h3>İtibar &amp; prestij</h3>
+          <p>Günlük kotayı tut, itibarını yükselt, prestij bonuslarıyla kalıcı avantaj kazan.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#e35d52;">💸</div>
+          <h3>Gerçekçi işletme giderleri</h3>
+          <p>Elektrik, su, maaş, yemek, servis ve iş güvenliği ekipmanı her gün otomatik kesilir.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#5aa3d0;">🏭</div>
+          <h3>Çoklu saha</h3>
+          <p>Tek sahayla sınırlı kalma — yeni fabrika sahaları açıp aynı anda büyüt.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#b06fd8;">📱</div>
+          <h3>Mobil uyumlu</h3>
+          <p>Dokunmatik kaydırma, pinch-zoom ve duyarlı arayüzle telefonda da rahatça oynanır.</p>
+        </div>
+        <div class="station-card">
+          <div class="station-swatch" style="background:#e3b23c;color:#1a1400;">🌐</div>
+          <h3>TR / EN dil desteği</h3>
+          <p>Tüm arayüz iki dilde; tek tıkla anında dil değiştirilir.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="footer-brand">⚙ CNC FABRİKA — v0.1</div>
+      <a class="footer-cta" href="cnc-factory.html">Oynamaya Başla →</a>
+    </div>
+    <div class="footnote">Telif Hakkı © 2026 CNC-FACTORY | Çevrimdışı iş simülasyonu oyunu.</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  const colors = ['#5aa3d0','#4fbf82','#e3b23c','#b06fd8','#f0a030'];
+  const field = document.getElementById('chipField');
+  const count = window.innerWidth < 640 ? 5 : 10;
+  for (let i = 0; i < count; i++) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.style.background = colors[i % colors.length];
+    chip.style.left = (5 + Math.random() * 90) + '%';
+    chip.style.top = (10 + Math.random() * 70) + '%';
+    chip.style.animationDelay = (Math.random() * -9) + 's';
+    chip.style.animationDuration = (7 + Math.random() * 5) + 's';
+    field.appendChild(chip);
+  }
+})();
+
+(function(){
+  const floor = document.getElementById('mockFloor');
+  const machines = [
+    { left: '12%', top: '28%', color: '#5aa3d0' },
+    { left: '38%', top: '55%', color: '#4fbf82' },
+    { left: '64%', top: '22%', color: '#e3b23c' },
+    { left: '86%', top: '58%', color: '#b06fd8' },
+  ];
+  machines.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'mock-machine';
+    el.style.left = m.left; el.style.top = m.top;
+    const core = document.createElement('div');
+    core.className = 'core';
+    core.style.background = m.color;
+    core.style.animationDuration = (2.4 + i * 0.4) + 's';
+    el.appendChild(core);
+    floor.appendChild(el);
+  });
+  for (let i = 0; i < 3; i++) {
+    const item = document.createElement('div');
+    item.className = 'mock-belt-item';
+    item.style.top = (20 + i * 28) + '%';
+    item.style.animationDelay = (i * -1.1) + 's';
+    item.style.background = ['#5aa3d0','#4fbf82','#e3b23c'][i];
+    floor.appendChild(item);
+  }
+})();
+</script>
+
+</body>
+</html>
