@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Her oyuncu sadece KENDİ kayıt belgesini okuyup yazabilir.
+    // Doküman yolu: saves/{kullanicinin_uid_degeri}
+    match /saves/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Hesap silme talepleri: Google Play politikası, kullanıcının uygulamaya
+    // giriş yapmadan da (örn. web sayfasından) silme talebi oluşturabilmesini
+    // gerektiriyor. Bu koleksiyona HERKES yeni bir talep OLUŞTURABİLİR
+    // (create), ama var olan talepleri okuyamaz/değiştiremez — böylece
+    // başkasının talebini göremez ya da bozamaz.
+    match /accountDeletionRequests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+  }
+}

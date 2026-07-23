@@ -14,6 +14,10 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="auth.js"></script>
 <style>
 /* ============================================================
    DESIGN TOKENS
@@ -288,6 +292,17 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 .welcome-row .val{font-weight:700;}
 .welcome-intro{font-size:12.5px;color:var(--text-dim);margin-bottom:12px;line-height:1.5;}
 
+/* Account modal */
+.account-note{font-size:12px;color:var(--text-dim);line-height:1.5;margin:0 0 12px 0;}
+.account-input{
+  width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+  font-family:var(--font-mono);font-size:13px;padding:10px 12px;border-radius:4px;margin-bottom:8px;
+}
+.account-input:focus{outline:none;border-color:var(--amber-dim);}
+.account-error{font-size:11.5px;color:var(--red);background:rgba(227,93,82,0.1);border:1px solid rgba(227,93,82,0.3);border-radius:4px;padding:8px 10px;margin-bottom:8px;}
+.account-error.hidden{display:none;}
+.account-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
 /* ============================================================
    RESPONSIVE / MOBILE — stacks the floor above a scrollable sidebar,
    compacts the topbar into two rows, and enlarges tap targets.
@@ -358,6 +373,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     <div class="stat"><span class="label" data-i18n="labelClock">Saat</span><span class="value" id="stat-clock">00:00</span></div>
     <div class="stat"><span class="label" data-i18n="labelShift">Vardiya</span><span class="value" id="stat-shift">☀️ Gündüz</span></div>
     <div class="spacer"></div>
+    <button class="save-btn" id="btn-account">👤 <span id="btn-account-label" data-i18n="accountGuest">Hesap</span></button>
     <button class="save-btn" id="btn-lang">🌐 EN</button>
     <button class="save-btn" id="btn-stats">📊 <span data-i18n="btnStats">İstatistik</span></button>
     <button class="save-btn" id="btn-tech">🔬 <span data-i18n="btnTech">Ar-Ge</span></button>
@@ -466,6 +482,33 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     </div>
     <div id="welcome-body"></div>
     <button id="btn-welcome-continue" class="save-btn" style="width:100%;margin-top:14px;color:var(--amber);border-color:var(--amber-dim);" data-i18n="welcomeBackContinue">Devam Et</button>
+  </div>
+</div>
+
+<div id="account-modal" class="modal-backdrop hidden">
+  <div class="modal-panel" style="width:380px;">
+    <div class="modal-header">
+      <h2 data-i18n="accountTitle">Hesap</h2>
+      <button id="btn-account-close">✕</button>
+    </div>
+
+    <div id="account-logged-out">
+      <p class="account-note" data-i18n="accountNoteGuest">Giriş yapmazsan ilerlemen sadece bu cihazda saklanır. Hesap oluşturursan ilerlemen bulutta senkronize edilir.</p>
+      <input type="email" id="account-email" class="account-input" placeholder="E-posta" autocomplete="email">
+      <input type="password" id="account-password" class="account-input" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+      <div id="account-error" class="account-error hidden"></div>
+      <div class="account-btn-row">
+        <button id="btn-account-login" class="save-btn" data-i18n="accountLogin">Giriş Yap</button>
+        <button id="btn-account-register" class="save-btn" style="color:var(--green);border-color:var(--green);" data-i18n="accountRegister">Kayıt Ol</button>
+      </div>
+    </div>
+
+    <div id="account-logged-in" class="hidden">
+      <p class="account-note"><span data-i18n="accountLoggedInAs">Giriş yapıldı:</span> <b id="account-email-display"></b></p>
+      <p class="account-note" style="color:var(--green);" data-i18n="accountSyncNote">İlerlemen bulutla senkronize ediliyor.</p>
+      <button id="btn-account-logout" class="save-btn" style="width:100%;margin-bottom:8px;" data-i18n="accountLogout">Çıkış Yap</button>
+      <button id="btn-account-delete" class="save-btn" style="width:100%;color:var(--red);border-color:var(--red);" data-i18n="accountDelete">Hesabı ve Verilerimi Sil</button>
+    </div>
   </div>
 </div>
 
@@ -742,6 +785,15 @@ const TRANSLATIONS = {
     welcomeBackMoney: 'Net nakit değişimi',
     welcomeBackReputation: 'İtibar değişimi',
     durationMinutes: '{n} dakika', durationHours: '{n} saat', durationDays: '{n} gün',
+    accountTitle: 'Hesap', accountGuest: 'Hesap',
+    accountNoteGuest: 'Giriş yapmazsan ilerlemen sadece bu cihazda saklanır. Hesap oluşturursan ilerlemen bulutta senkronize edilir.',
+    accountLogin: 'Giriş Yap', accountRegister: 'Kayıt Ol',
+    accountLoggedInAs: 'Giriş yapıldı:', accountSyncNote: 'İlerlemen bulutla senkronize ediliyor.',
+    accountLogout: 'Çıkış Yap', accountDelete: 'Hesabı ve Verilerimi Sil',
+    accountDeleteConfirm: 'Hesabını ve tüm bulut ilerlemeni kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.',
+    accountDeleted: 'Hesabın silindi.',
+    accountNeedsReauth: 'Bu işlem için tekrar giriş yapman gerekiyor. Çıkış yapıp yeniden giriş yaptıktan sonra tekrar dene.',
+    accountFillFields: 'E-posta ve şifre gerekli.',
   },
   en: {
     appTitle: 'CNC FACTORY', appSubtitle: 'v0.1 — management simulation',
@@ -820,6 +872,15 @@ const TRANSLATIONS = {
     welcomeBackMoney: 'Net cash change',
     welcomeBackReputation: 'Reputation change',
     durationMinutes: '{n} minutes', durationHours: '{n} hours', durationDays: '{n} days',
+    accountTitle: 'Account', accountGuest: 'Account',
+    accountNoteGuest: 'Without an account your progress only stays on this device. Register to sync your progress to the cloud.',
+    accountLogin: 'Log In', accountRegister: 'Register',
+    accountLoggedInAs: 'Signed in as:', accountSyncNote: 'Your progress is syncing with the cloud.',
+    accountLogout: 'Log Out', accountDelete: 'Delete Account & Data',
+    accountDeleteConfirm: 'Are you sure you want to permanently delete your account and all cloud progress? This cannot be undone.',
+    accountDeleted: 'Your account has been deleted.',
+    accountNeedsReauth: 'You need to sign in again for this action. Log out, sign back in, then try again.',
+    accountFillFields: 'Email and password are required.',
   },
 };
 
@@ -2004,8 +2065,8 @@ const Input = {
    ================================================================ */
 const SaveSystem = {
   KEY: 'cnc-factory-save-v3',
-  serialize() {
-    return JSON.stringify({
+  buildSaveObject() {
+    return {
       money: State.money,
       steel: State.steel,
       day: State.day,
@@ -2037,7 +2098,10 @@ const SaveSystem = {
         })),
       })),
       orders: [], // orders intentionally not persisted (time-based, would feel stale)
-    });
+    };
+  },
+  serialize() {
+    return JSON.stringify(SaveSystem.buildSaveObject());
   },
   // Persistence has two backends: window.storage (only exists inside Claude's
   // artifact preview) and localStorage (every real browser/WebView, including
@@ -2057,69 +2121,113 @@ const SaveSystem = {
         if (!silent) UI.toast(Lang.t('toastSaveUnavailable'));
         return;
       }
+      // Local save always happens first (works offline, instant); if the
+      // player is signed in we additionally push the same data to their
+      // cloud save so it's there for other devices. Cloud failures (e.g.
+      // no network) don't affect the local save's success.
+      if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        Auth.saveCloud(SaveSystem.buildSaveObject()).catch((err) => console.warn('cloud save failed', err));
+      }
       if (!silent) UI.toast(Lang.t('toastSaved'));
     } catch (err) {
       console.error('save error', err);
       if (!silent) UI.toast(Lang.t('toastSaveFailed'));
     }
   },
+  // Applies a parsed save object (from localStorage, window.storage, or
+  // Firestore — all use the same shape) onto State. Shared by the normal
+  // startup load and by "pull my cloud save" after a mid-session login.
+  applyData(data) {
+    State.money = data.money ?? CONFIG.startMoney;
+    State.steel = data.steel ?? CONFIG.startSteel;
+    State.day = data.day ?? 1;
+    State.reputation = data.reputation ?? CONFIG.reputationStart;
+    State.prestigeLevel = data.prestigeLevel ?? 0;
+    State.dailyProduced = data.dailyProduced ?? 0;
+    State.dailyQuota = computeDailyQuota(State.day);
+    State.firstEpochMs = data.firstEpochMs ?? localMidnight(Date.now());
+    const previousLastSeenMs = data.lastSeenMs ?? null;
+    State.lastSeenMs = Date.now();
+    State.inventory = data.inventory ?? State.inventory;
+    if (data.stats) {
+      State.stats.totalProducedByPart = data.stats.totalProducedByPart || State.stats.totalProducedByPart;
+      State.stats.totalOrdersCompleted = data.stats.totalOrdersCompleted || 0;
+      State.stats.totalRevenue = data.stats.totalRevenue || 0;
+      State.stats.totalExpensesPaid = data.stats.totalExpensesPaid || 0;
+      State.stats.lastExpenseBreakdown = data.stats.lastExpenseBreakdown || null;
+      State.stats.expenseHistory = Array.isArray(data.stats.expenseHistory) ? data.stats.expenseHistory : [];
+    }
+
+    State.sites = [];
+    for (const sd of (data.sites || [])) {
+      const site = {
+        id: sd.id, name: sd.name, cols: sd.cols, rows: sd.rows,
+        grid: [], buildings: [], camera: { x: 0, y: 0, zoom: 1 },
+        expandCount: sd.expandCount || 0,
+      };
+      Sites.initGrid(site);
+      for (const bd of (sd.buildings || [])) {
+        if (!CONFIG.buildables[bd.defId]) continue; // ignore unknown ids from older saves
+        const b = Factory.create(bd.defId, bd.row, bd.col);
+        if (b.kind === 'machine' && bd.level) b.level = bd.level;
+        if (b.kind === 'machine' && typeof bd.wear === 'number') b.wear = bd.wear;
+        if (b.kind === 'machine' && bd.broken) b.broken = true;
+        if (b.kind === 'belt' && bd.dir) b.dir = bd.dir;
+        site.grid[bd.row][bd.col] = b;
+        site.buildings.push(b);
+      }
+      State.sites.push(site);
+      State.nextSiteId = Math.max(State.nextSiteId, sd.id + 1);
+    }
+    State.currentSiteId = data.currentSiteId ?? (State.sites[0] && State.sites[0].id);
+    State.unlockedTech = Array.isArray(data.unlockedTech) ? data.unlockedTech : [];
+    Lang.current = (data.lang === 'en') ? 'en' : 'tr';
+    document.documentElement.lang = Lang.current;
+    return { ok: State.sites.length > 0, previousLastSeenMs };
+  },
+  async loadLocalRaw() {
+    if (SaveSystem.hasClaudeStorage()) {
+      const res = await window.storage.get(SaveSystem.KEY, false);
+      return res && res.value;
+    } else if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(SaveSystem.KEY);
+    }
+    return null;
+  },
   async load() {
     try {
-      let raw = null;
-      if (SaveSystem.hasClaudeStorage()) {
-        const res = await window.storage.get(SaveSystem.KEY, false);
-        raw = res && res.value;
-      } else if (typeof localStorage !== 'undefined') {
-        raw = localStorage.getItem(SaveSystem.KEY);
-      }
-      if (!raw) return { loaded: false, previousLastSeenMs: null };
-      const data = JSON.parse(raw);
-      State.money = data.money ?? CONFIG.startMoney;
-      State.steel = data.steel ?? CONFIG.startSteel;
-      State.day = data.day ?? 1;
-      State.reputation = data.reputation ?? CONFIG.reputationStart;
-      State.prestigeLevel = data.prestigeLevel ?? 0;
-      State.dailyProduced = data.dailyProduced ?? 0;
-      State.dailyQuota = computeDailyQuota(State.day);
-      State.firstEpochMs = data.firstEpochMs ?? localMidnight(Date.now());
-      const previousLastSeenMs = data.lastSeenMs ?? null;
-      State.lastSeenMs = Date.now();
-      State.inventory = data.inventory ?? State.inventory;
-      if (data.stats) {
-        State.stats.totalProducedByPart = data.stats.totalProducedByPart || State.stats.totalProducedByPart;
-        State.stats.totalOrdersCompleted = data.stats.totalOrdersCompleted || 0;
-        State.stats.totalRevenue = data.stats.totalRevenue || 0;
-        State.stats.totalExpensesPaid = data.stats.totalExpensesPaid || 0;
-        State.stats.lastExpenseBreakdown = data.stats.lastExpenseBreakdown || null;
-        State.stats.expenseHistory = Array.isArray(data.stats.expenseHistory) ? data.stats.expenseHistory : [];
+      // If a session is already known (persisted from a previous visit),
+      // the cloud save is the source of truth — it's what makes progress
+      // follow the player across devices. Otherwise fall back to
+      // whatever's on this device.
+      if (typeof Auth !== 'undefined') {
+        const user = await Auth.waitForReady();
+        if (user) {
+          const cloudData = await Auth.loadCloud().catch(() => null);
+          if (cloudData) {
+            const { ok, previousLastSeenMs } = SaveSystem.applyData(cloudData);
+            if (ok) { UI.toast(Lang.t('toastLoaded')); return { loaded: true, previousLastSeenMs }; }
+          } else {
+            // Signed in, but no cloud save yet — adopt whatever's on this
+            // device (if anything) and push it up so this account now owns it.
+            const raw = await SaveSystem.loadLocalRaw();
+            if (raw) {
+              const { ok, previousLastSeenMs } = SaveSystem.applyData(JSON.parse(raw));
+              if (ok) {
+                SaveSystem.save(true);
+                return { loaded: true, previousLastSeenMs };
+              }
+            }
+            return { loaded: false, previousLastSeenMs: null };
+          }
+        }
       }
 
-      State.sites = [];
-      for (const sd of (data.sites || [])) {
-        const site = {
-          id: sd.id, name: sd.name, cols: sd.cols, rows: sd.rows,
-          grid: [], buildings: [], camera: { x: 0, y: 0, zoom: 1 },
-          expandCount: sd.expandCount || 0,
-        };
-        Sites.initGrid(site);
-        for (const bd of (sd.buildings || [])) {
-          if (!CONFIG.buildables[bd.defId]) continue; // ignore unknown ids from older saves
-          const b = Factory.create(bd.defId, bd.row, bd.col);
-          if (b.kind === 'machine' && bd.level) b.level = bd.level;
-          if (b.kind === 'machine' && typeof bd.wear === 'number') b.wear = bd.wear;
-          if (b.kind === 'machine' && bd.broken) b.broken = true;
-          if (b.kind === 'belt' && bd.dir) b.dir = bd.dir;
-          site.grid[bd.row][bd.col] = b;
-          site.buildings.push(b);
-        }
-        State.sites.push(site);
-        State.nextSiteId = Math.max(State.nextSiteId, sd.id + 1);
-      }
-      State.currentSiteId = data.currentSiteId ?? (State.sites[0] && State.sites[0].id);
-      State.unlockedTech = Array.isArray(data.unlockedTech) ? data.unlockedTech : [];
-      Lang.current = (data.lang === 'en') ? 'en' : 'tr';
-      document.documentElement.lang = Lang.current;
-      if (State.sites.length === 0) return { loaded: false, previousLastSeenMs: null }; // corrupt/empty save, fall back to fresh start
+      const raw = await SaveSystem.loadLocalRaw();
+      if (!raw) return { loaded: false, previousLastSeenMs: null };
+      const data = JSON.parse(raw);
+      const { ok, previousLastSeenMs } = SaveSystem.applyData(data);
+      if (!ok) return { loaded: false, previousLastSeenMs: null }; // corrupt/empty save, fall back to fresh start
       UI.toast(Lang.t('toastLoaded'));
       return { loaded: true, previousLastSeenMs };
     } catch (err) {
@@ -2175,6 +2283,59 @@ const UI = {
     });
     document.getElementById('btn-welcome-close').addEventListener('click', () => UI.toggleModal('welcome-modal', false));
     document.getElementById('btn-welcome-continue').addEventListener('click', () => UI.toggleModal('welcome-modal', false));
+
+    document.getElementById('btn-account').addEventListener('click', () => {
+      UI.clearAccountError();
+      document.getElementById('account-email').value = '';
+      document.getElementById('account-password').value = '';
+      UI.toggleModal('account-modal', true);
+    });
+    document.getElementById('btn-account-close').addEventListener('click', () => UI.toggleModal('account-modal', false));
+    document.getElementById('account-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'account-modal') UI.toggleModal('account-modal', false);
+    });
+    document.getElementById('btn-account-login').addEventListener('click', async () => {
+      UI.clearAccountError();
+      const email = document.getElementById('account-email').value.trim();
+      const password = document.getElementById('account-password').value;
+      if (!email || !password) { UI.showAccountError(Lang.t('accountFillFields')); return; }
+      try {
+        await Auth.login(email, password);
+        UI.toggleModal('account-modal', false);
+      } catch (err) {
+        UI.showAccountError(Auth.friendlyError(err));
+      }
+    });
+    document.getElementById('btn-account-register').addEventListener('click', async () => {
+      UI.clearAccountError();
+      const email = document.getElementById('account-email').value.trim();
+      const password = document.getElementById('account-password').value;
+      if (!email || !password) { UI.showAccountError(Lang.t('accountFillFields')); return; }
+      try {
+        await Auth.register(email, password);
+        UI.toggleModal('account-modal', false);
+      } catch (err) {
+        UI.showAccountError(Auth.friendlyError(err));
+      }
+    });
+    document.getElementById('btn-account-logout').addEventListener('click', async () => {
+      await Auth.logout();
+      UI.toggleModal('account-modal', false);
+    });
+    document.getElementById('btn-account-delete').addEventListener('click', async () => {
+      if (!confirm(Lang.t('accountDeleteConfirm'))) return;
+      try {
+        await Auth.deleteAccount();
+        UI.toggleModal('account-modal', false);
+        UI.toast(Lang.t('accountDeleted'));
+      } catch (err) {
+        if (err.code === 'auth/requires-recent-login') {
+          UI.showAccountError(Lang.t('accountNeedsReauth'));
+        } else {
+          UI.showAccountError(Auth.friendlyError(err));
+        }
+      }
+    });
     document.getElementById('tech-tiers').addEventListener('click', (e) => {
       const btn = e.target.closest('.tech-research-btn');
       if (!btn || btn.disabled) return;
@@ -2232,6 +2393,7 @@ const UI = {
   // switch so all currently-visible content (not just static labels) updates.
   refreshAll() {
     UI.refreshTopbar();
+    UI.refreshAccountUI();
     UI.buildShop();
     UI.refreshInventory();
     UI.refreshOrders();
@@ -2305,6 +2467,30 @@ const UI = {
       ${row(Lang.t('welcomeBackReputation'), `${summary.reputationDelta >= 0 ? '+' : ''}${Math.round(summary.reputationDelta)}`, repColor)}
     `;
     UI.toggleModal('welcome-modal', true);
+  },
+  refreshAccountUI() {
+    const user = (typeof Auth !== 'undefined') ? Auth.currentUser : null;
+    const label = document.getElementById('btn-account-label');
+    const loggedOutPanel = document.getElementById('account-logged-out');
+    const loggedInPanel = document.getElementById('account-logged-in');
+    if (user) {
+      label.textContent = user.email;
+      loggedOutPanel.classList.add('hidden');
+      loggedInPanel.classList.remove('hidden');
+      document.getElementById('account-email-display').textContent = user.email;
+    } else {
+      label.textContent = Lang.t('accountGuest');
+      loggedOutPanel.classList.remove('hidden');
+      loggedInPanel.classList.add('hidden');
+    }
+  },
+  showAccountError(msg) {
+    const el = document.getElementById('account-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  },
+  clearAccountError() {
+    document.getElementById('account-error').classList.add('hidden');
   },
   toggleStats(show) {
     const modal = document.getElementById('stats-modal');
@@ -2806,8 +2992,35 @@ const Game = {
     };
   },
 
+  gameHasStarted: false,
+
   async start() {
     Renderer.init();
+
+    // Registered before the initial load() resolves, so it also observes
+    // the very first auth-state check — but gameHasStarted is still false
+    // then, so it only does a UI refresh, not a redundant cloud-pull (the
+    // initial load() below already handles pulling the cloud save once).
+    if (typeof Auth !== 'undefined') {
+      Auth.onChange((user) => {
+        UI.refreshAccountUI();
+        if (Game.gameHasStarted && user) {
+          // A login happened mid-session (via the account modal) — pull
+          // their cloud save now, or adopt this device's current progress
+          // into the account if they don't have one yet.
+          Auth.loadCloud().then((data) => {
+            if (data) {
+              SaveSystem.applyData(data);
+              UI.refreshAll();
+              UI.toast(Lang.t('toastLoaded'));
+            } else {
+              SaveSystem.save(true);
+            }
+          }).catch((err) => console.warn('post-login cloud pull failed', err));
+        }
+      });
+    }
+
     const { loaded, previousLastSeenMs } = await SaveSystem.load();
     if (!loaded) {
       State.firstEpochMs = localMidnight(Date.now());
@@ -2835,6 +3048,7 @@ const Game = {
     this.lastTime = performance.now();
     this.lastAutosave = this.lastTime;
     this.lastStatsSample = this.lastTime;
+    Game.gameHasStarted = true;
     requestAnimationFrame(this.loop.bind(this));
   },
 
