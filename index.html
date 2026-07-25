@@ -91,6 +91,11 @@ h1.title span{color:var(--amber);}
 .account-error{font-size:11.5px;color:var(--red);background:rgba(227,93,82,0.1);border:1px solid rgba(227,93,82,0.3);border-radius:4px;padding:9px 11px;margin-bottom:9px;}
 .account-error.hidden{display:none;}
 .account-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.account-link-btn{
+  display:block;width:100%;text-align:center;margin-top:10px;background:none;border:none;
+  color:var(--text-dim);font-family:var(--font-mono);font-size:11.5px;text-decoration:underline;cursor:pointer;
+}
+.account-link-btn:hover{color:var(--amber);}
 .account-btn-row button, #landing-account-logged-in button{
   font-family:var(--font-mono);font-size:12.5px;padding:11px;border-radius:4px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--text);
 }
@@ -354,6 +359,7 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
         <button id="btn-landing-login">Giriş Yap</button>
         <button id="btn-landing-register">Kayıt Ol</button>
       </div>
+      <button id="btn-landing-forgot" class="account-link-btn">Şifremi unuttum</button>
     </div>
 
     <div id="landing-account-logged-in" class="hidden">
@@ -371,7 +377,7 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
       <div class="footer-brand">⚙ CNC FABRİKA — v0.1</div>
       <a class="footer-cta" href="cnc-factory.html">Oynamaya Başla →</a>
     </div>
-    <div class="footnote">Tarayıcı tabanlı yönetim simülasyonu. İlerlemen cihazında saklanır.</div>
+    <div class="footnote">Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir. · <a href="account-deletion.html" style="color:#5a636c;">Hesap Silme</a></div>
   </div>
 </footer>
 
@@ -433,7 +439,12 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   const errorEl = document.getElementById('landing-account-error');
 
   function showError(msg) { errorEl.textContent = msg; errorEl.classList.remove('hidden'); }
-  function clearError() { errorEl.classList.add('hidden'); }
+  function clearError() {
+    errorEl.classList.add('hidden');
+    errorEl.style.color = '';
+    errorEl.style.background = '';
+    errorEl.style.borderColor = '';
+  }
   function openModal() {
     clearError();
     document.getElementById('landing-email').value = '';
@@ -488,6 +499,20 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   });
   document.getElementById('btn-landing-continue').addEventListener('click', () => {
     window.location.href = 'cnc-factory.html';
+  });
+  document.getElementById('btn-landing-forgot').addEventListener('click', async () => {
+    clearError();
+    const email = document.getElementById('landing-email').value.trim();
+    if (!email) { showError('Önce e-posta alanına adresini yaz.'); return; }
+    try {
+      await Auth.sendPasswordReset(email);
+      showError('Şifre sıfırlama bağlantısı e-postana gönderildi.');
+      errorEl.style.color = 'var(--green)';
+      errorEl.style.background = 'rgba(79,191,130,0.1)';
+      errorEl.style.borderColor = 'rgba(79,191,130,0.3)';
+    } catch (err) {
+      showError(Auth.friendlyError(err));
+    }
   });
 
   if (typeof Auth !== 'undefined') Auth.onChange(refresh);

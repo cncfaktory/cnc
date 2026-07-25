@@ -302,6 +302,11 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 .account-error{font-size:11.5px;color:var(--red);background:rgba(227,93,82,0.1);border:1px solid rgba(227,93,82,0.3);border-radius:4px;padding:8px 10px;margin-bottom:8px;}
 .account-error.hidden{display:none;}
 .account-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.account-link-btn{
+  display:block;width:100%;text-align:center;margin-top:10px;background:none;border:none;
+  color:var(--text-dim);font-family:var(--font-mono);font-size:11.5px;text-decoration:underline;cursor:pointer;
+}
+.account-link-btn:hover{color:var(--amber);}
 
 /* ============================================================
    RESPONSIVE / MOBILE — stacks the floor above a scrollable sidebar,
@@ -501,13 +506,25 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
         <button id="btn-account-login" class="save-btn" data-i18n="accountLogin">Giriş Yap</button>
         <button id="btn-account-register" class="save-btn" style="color:var(--green);border-color:var(--green);" data-i18n="accountRegister">Kayıt Ol</button>
       </div>
+      <button id="btn-account-forgot" class="account-link-btn" data-i18n="accountForgotPassword">Şifremi unuttum</button>
     </div>
 
     <div id="account-logged-in" class="hidden">
       <p class="account-note"><span data-i18n="accountLoggedInAs">Giriş yapıldı:</span> <b id="account-email-display"></b></p>
       <p class="account-note" style="color:var(--green);" data-i18n="accountSyncNote">İlerlemen bulutla senkronize ediliyor.</p>
       <button id="btn-account-logout" class="save-btn" style="width:100%;margin-bottom:8px;" data-i18n="accountLogout">Çıkış Yap</button>
+      <button id="btn-account-show-change-password" class="save-btn" style="width:100%;margin-bottom:8px;" data-i18n="accountChangePassword">Şifre Değiştir</button>
       <button id="btn-account-delete" class="save-btn" style="width:100%;color:var(--red);border-color:var(--red);" data-i18n="accountDelete">Hesabı ve Verilerimi Sil</button>
+
+      <div id="account-change-password-form" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);">
+        <input type="password" id="account-current-password" class="account-input" data-i18n-placeholder="accountCurrentPassword" placeholder="Mevcut şifre" autocomplete="current-password">
+        <input type="password" id="account-new-password" class="account-input" data-i18n-placeholder="accountNewPassword" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">
+        <div id="account-password-error" class="account-error hidden"></div>
+        <div class="account-btn-row">
+          <button id="btn-account-submit-password" class="save-btn" style="color:var(--green);border-color:var(--green);" data-i18n="accountChangePasswordSubmit">Şifreyi Güncelle</button>
+          <button id="btn-account-cancel-password" class="save-btn" data-i18n="accountCancel">Vazgeç</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -794,6 +811,16 @@ const TRANSLATIONS = {
     accountDeleted: 'Hesabın silindi.',
     accountNeedsReauth: 'Bu işlem için tekrar giriş yapman gerekiyor. Çıkış yapıp yeniden giriş yaptıktan sonra tekrar dene.',
     accountFillFields: 'E-posta ve şifre gerekli.',
+    accountForgotPassword: 'Şifremi unuttum',
+    accountForgotPasswordNeedsEmail: 'Önce e-posta alanına adresini yaz.',
+    accountResetSent: 'Şifre sıfırlama bağlantısı e-postana gönderildi.',
+    accountChangePassword: 'Şifre Değiştir',
+    accountCurrentPassword: 'Mevcut şifre',
+    accountNewPassword: 'Yeni şifre (en az 6 karakter)',
+    accountChangePasswordSubmit: 'Şifreyi Güncelle',
+    accountPasswordChanged: 'Şifren güncellendi.',
+    accountFillAllPasswordFields: 'Her iki şifre alanı da gerekli.',
+    accountCancel: 'Vazgeç',
   },
   en: {
     appTitle: 'CNC FACTORY', appSubtitle: 'v0.1 — management simulation',
@@ -881,6 +908,16 @@ const TRANSLATIONS = {
     accountDeleted: 'Your account has been deleted.',
     accountNeedsReauth: 'You need to sign in again for this action. Log out, sign back in, then try again.',
     accountFillFields: 'Email and password are required.',
+    accountForgotPassword: 'Forgot password?',
+    accountForgotPasswordNeedsEmail: 'Enter your email in the field above first.',
+    accountResetSent: 'A password reset link has been sent to your email.',
+    accountChangePassword: 'Change Password',
+    accountCurrentPassword: 'Current password',
+    accountNewPassword: 'New password (min. 6 characters)',
+    accountChangePasswordSubmit: 'Update Password',
+    accountPasswordChanged: 'Your password has been updated.',
+    accountFillAllPasswordFields: 'Both password fields are required.',
+    accountCancel: 'Cancel',
   },
 };
 
@@ -2288,6 +2325,7 @@ const UI = {
       UI.clearAccountError();
       document.getElementById('account-email').value = '';
       document.getElementById('account-password').value = '';
+      document.getElementById('account-change-password-form').classList.add('hidden');
       UI.toggleModal('account-modal', true);
     });
     document.getElementById('btn-account-close').addEventListener('click', () => UI.toggleModal('account-modal', false));
@@ -2336,6 +2374,48 @@ const UI = {
         }
       }
     });
+
+    document.getElementById('btn-account-forgot').addEventListener('click', async () => {
+      UI.clearAccountError();
+      const email = document.getElementById('account-email').value.trim();
+      if (!email) { UI.showAccountError(Lang.t('accountForgotPasswordNeedsEmail')); return; }
+      try {
+        await Auth.sendPasswordReset(email);
+        UI.toast(Lang.t('accountResetSent'));
+      } catch (err) {
+        UI.showAccountError(Auth.friendlyError(err));
+      }
+    });
+
+    document.getElementById('btn-account-show-change-password').addEventListener('click', () => {
+      document.getElementById('account-current-password').value = '';
+      document.getElementById('account-new-password').value = '';
+      document.getElementById('account-password-error').classList.add('hidden');
+      document.getElementById('account-change-password-form').classList.remove('hidden');
+    });
+    document.getElementById('btn-account-cancel-password').addEventListener('click', () => {
+      document.getElementById('account-change-password-form').classList.add('hidden');
+    });
+    document.getElementById('btn-account-submit-password').addEventListener('click', async () => {
+      const errEl = document.getElementById('account-password-error');
+      errEl.classList.add('hidden');
+      const current = document.getElementById('account-current-password').value;
+      const next = document.getElementById('account-new-password').value;
+      if (!current || !next) {
+        errEl.textContent = Lang.t('accountFillAllPasswordFields');
+        errEl.classList.remove('hidden');
+        return;
+      }
+      try {
+        await Auth.changePassword(current, next);
+        document.getElementById('account-change-password-form').classList.add('hidden');
+        UI.toast(Lang.t('accountPasswordChanged'));
+      } catch (err) {
+        errEl.textContent = Auth.friendlyError(err);
+        errEl.classList.remove('hidden');
+      }
+    });
+
     document.getElementById('tech-tiers').addEventListener('click', (e) => {
       const btn = e.target.closest('.tech-research-btn');
       if (!btn || btn.disabled) return;
@@ -2385,6 +2465,9 @@ const UI = {
   applyStaticText() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
       el.textContent = Lang.t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = Lang.t(el.dataset.i18nPlaceholder);
     });
     const langBtn = document.getElementById('btn-lang');
     if (langBtn) langBtn.textContent = `🌐 ${Lang.t('btnLang')}`;

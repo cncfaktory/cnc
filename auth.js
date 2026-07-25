@@ -75,6 +75,25 @@ const Auth = {
     await firebase.auth().signOut();
   },
 
+  // Sends Firebase's built-in "reset your password" email — works for
+  // anyone who knows their account email, no session required.
+  async sendPasswordReset(email) {
+    await firebase.auth().sendPasswordResetEmail(email);
+  },
+
+  // Changing a password is a sensitive action, so Firebase requires a
+  // "fresh" login first. Rather than surface that as an error, we
+  // proactively re-authenticate with the current password the user just
+  // typed, then apply the new one — this always works regardless of how
+  // old the existing session is.
+  async changePassword(currentPassword, newPassword) {
+    const user = firebase.auth().currentUser;
+    if (!user) throw new Error('not-signed-in');
+    const cred = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(newPassword);
+  },
+
   // Deletes the player's cloud save AND their Firebase Auth account itself.
   // Firebase requires a "recent" login for account deletion; if the
   // session is old, this throws auth/requires-recent-login and the caller
