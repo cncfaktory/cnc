@@ -2,7 +2,7 @@
   "name": "CNC Fabrika — Yönetim Simülasyonu",
   "short_name": "CNC Fabrika",
   "description": "2D üstten görünümlü CNC işleme fabrikası yönetim/tycoon oyunu.",
-  "start_url": "./cnc-factory.html",
+  "start_url": "https://cncfaktory.github.io/cnc/",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
