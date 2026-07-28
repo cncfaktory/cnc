@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.cncfaktory.twa",
+        "sha256_cert_fingerprints": ["7A:C0:65:3E:DA:05:01:89:76:8A:C5:0B:01:3B:4A:D7:9F:F4:5F:B2:67:5F:7F:4F:2D:1D:ED:41:93:73:56:17"]
+      }
+    }]
