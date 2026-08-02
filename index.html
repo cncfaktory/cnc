@@ -354,6 +354,14 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
       <p class="account-note">Hesap oluşturursan ilerlemen bulutta saklanır ve farklı cihazlardan aynı fabrikayla devam edebilirsin.</p>
       <input type="email" id="landing-email" class="account-input" placeholder="E-posta" autocomplete="email">
       <input type="password" id="landing-password" class="account-input" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+      <div id="landing-register-fields">
+        <input type="password" id="landing-password2" class="account-input" placeholder="Şifre (tekrar)" autocomplete="new-password">
+        <input type="text" id="landing-fullname" class="account-input" placeholder="Adı Soyadı" autocomplete="name">
+        <input type="text" id="landing-region" class="account-input" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
+        <input type="number" id="landing-age" class="account-input" placeholder="Yaş" min="13" max="120">
+        <input type="text" id="landing-company" class="account-input" placeholder="Oyun İçi Şirket Adı" maxlength="30">
+        <div class="account-note" style="margin-top:-4px;">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
+      </div>
       <div id="landing-account-error" class="account-error hidden"></div>
       <div class="account-btn-row">
         <button id="btn-landing-login">Giriş Yap</button>
@@ -364,6 +372,7 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
 
     <div id="landing-account-logged-in" class="hidden">
       <p class="account-note">Giriş yapıldı: <b id="landing-email-display"></b></p>
+      <p class="account-note" id="landing-company-display-row" style="display:none;">🏢 <b id="landing-company-display"></b></p>
       <p class="account-note" style="color:var(--green);">İlerlemen bulutla senkronize ediliyor.</p>
       <button id="btn-landing-continue">Oynamaya Başla →</button>
       <button id="btn-landing-logout" style="color:var(--red);border-color:var(--red);">Çıkış Yap</button>
@@ -447,8 +456,9 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   }
   function openModal() {
     clearError();
-    document.getElementById('landing-email').value = '';
-    document.getElementById('landing-password').value = '';
+    ['landing-email','landing-password','landing-password2','landing-fullname','landing-region','landing-age','landing-company'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
     modal.classList.remove('hidden');
   }
   function closeModal() { modal.classList.add('hidden'); }
@@ -459,6 +469,14 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
       loggedOut.classList.add('hidden');
       loggedIn.classList.remove('hidden');
       document.getElementById('landing-email-display').textContent = user.email;
+      const companyRow = document.getElementById('landing-company-display-row');
+      companyRow.style.display = 'none';
+      Auth.getProfile(user.uid).then((profile) => {
+        if (profile && profile.companyName) {
+          document.getElementById('landing-company-display').textContent = profile.companyName;
+          companyRow.style.display = 'block';
+        }
+      }).catch(() => {});
     } else {
       label.textContent = 'Giriş Yap / Kayıt Ol';
       loggedOut.classList.remove('hidden');
@@ -486,9 +504,22 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     clearError();
     const email = document.getElementById('landing-email').value.trim();
     const password = document.getElementById('landing-password').value;
-    if (!email || !password) { showError('E-posta ve şifre gerekli.'); return; }
+    const password2 = document.getElementById('landing-password2').value;
+    const fullName = document.getElementById('landing-fullname').value.trim();
+    const region = document.getElementById('landing-region').value.trim();
+    const age = document.getElementById('landing-age').value.trim();
+    const companyName = document.getElementById('landing-company').value.trim();
+
+    if (!email || !password || !password2 || !fullName || !region || !age || !companyName) {
+      showError('Tüm alanları doldurman gerekiyor.'); return;
+    }
+    if (password !== password2) { showError('Şifreler eşleşmiyor.'); return; }
+    if (password.length < 6) { showError('Şifre en az 6 karakter olmalı.'); return; }
+    const ageNum = parseInt(age, 10);
+    if (!ageNum || ageNum < 13) { showError('Kayıt için en az 13 yaşında olman gerekiyor.'); return; }
+
     try {
-      await Auth.register(email, password);
+      await Auth.register(email, password, { fullName, region, age: ageNum, companyName });
       closeModal();
     } catch (err) {
       showError(Auth.friendlyError(err));

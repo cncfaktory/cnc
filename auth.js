@@ -63,8 +63,14 @@ const Auth = {
     return map[err.code] || (err.message || 'Bilinmeyen bir hata oluştu.');
   },
 
-  async register(email, password) {
+  // profile is optional: { fullName, region, age, companyName }. Stored in
+  // a separate users/{uid} document from the game save, since it's account
+  // metadata rather than gameplay state.
+  async register(email, password, profile) {
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+    if (profile) {
+      await Auth.saveProfile(cred.user.uid, { ...profile, email });
+    }
     return cred.user;
   },
   async login(email, password) {
@@ -73,6 +79,16 @@ const Auth = {
   },
   async logout() {
     await firebase.auth().signOut();
+  },
+
+  // Profile metadata (name/region/age/company name) — separate from the
+  // game save so it can be fetched independently and shown in account UI.
+  async saveProfile(uid, data) {
+    await firebase.firestore().collection('users').doc(uid).set(data, { merge: true });
+  },
+  async getProfile(uid) {
+    const snap = await firebase.firestore().collection('users').doc(uid).get();
+    return snap.exists ? snap.data() : null;
   },
 
   // Sends Firebase's built-in "reset your password" email — works for
@@ -103,6 +119,7 @@ const Auth = {
     if (!user) return;
     const uid = user.uid;
     await firebase.firestore().collection('saves').doc(uid).delete().catch(() => {});
+    await firebase.firestore().collection('users').doc(uid).delete().catch(() => {});
     await user.delete();
   },
 

@@ -501,6 +501,14 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
       <p class="account-note" data-i18n="accountNoteGuest">Giriş yapmazsan ilerlemen sadece bu cihazda saklanır. Hesap oluşturursan ilerlemen bulutta senkronize edilir.</p>
       <input type="email" id="account-email" class="account-input" placeholder="E-posta" autocomplete="email">
       <input type="password" id="account-password" class="account-input" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+      <div id="account-register-fields">
+        <input type="password" id="account-password2" class="account-input" data-i18n-placeholder="accountPassword2" placeholder="Şifre (tekrar)" autocomplete="new-password">
+        <input type="text" id="account-fullname" class="account-input" data-i18n-placeholder="accountFullName" placeholder="Adı Soyadı" autocomplete="name">
+        <input type="text" id="account-region" class="account-input" data-i18n-placeholder="accountRegion" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
+        <input type="number" id="account-age" class="account-input" data-i18n-placeholder="accountAge" placeholder="Yaş" min="13" max="120">
+        <input type="text" id="account-company" class="account-input" data-i18n-placeholder="accountCompanyName" placeholder="Oyun İçi Şirket Adı" maxlength="30">
+        <div class="account-note" style="margin-top:-4px;" data-i18n="accountCompanyHint">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
+      </div>
       <div id="account-error" class="account-error hidden"></div>
       <div class="account-btn-row">
         <button id="btn-account-login" class="save-btn" data-i18n="accountLogin">Giriş Yap</button>
@@ -511,6 +519,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 
     <div id="account-logged-in" class="hidden">
       <p class="account-note"><span data-i18n="accountLoggedInAs">Giriş yapıldı:</span> <b id="account-email-display"></b></p>
+      <p class="account-note" id="account-company-display-row" style="display:none;">🏢 <span data-i18n="accountCompanyLabel">Şirket</span>: <b id="account-company-display"></b></p>
       <p class="account-note" style="color:var(--green);" data-i18n="accountSyncNote">İlerlemen bulutla senkronize ediliyor.</p>
       <button id="btn-account-logout" class="save-btn" style="width:100%;margin-bottom:8px;" data-i18n="accountLogout">Çıkış Yap</button>
       <button id="btn-account-show-change-password" class="save-btn" style="width:100%;margin-bottom:8px;" data-i18n="accountChangePassword">Şifre Değiştir</button>
@@ -811,6 +820,13 @@ const TRANSLATIONS = {
     accountDeleted: 'Hesabın silindi.',
     accountNeedsReauth: 'Bu işlem için tekrar giriş yapman gerekiyor. Çıkış yapıp yeniden giriş yaptıktan sonra tekrar dene.',
     accountFillFields: 'E-posta ve şifre gerekli.',
+    accountPassword2: 'Şifre (tekrar)', accountFullName: 'Adı Soyadı', accountRegion: 'Bölge (örn: İstanbul, Türkiye)',
+    accountAge: 'Yaş', accountCompanyName: 'Oyun İçi Şirket Adı',
+    accountCompanyHint: 'Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.',
+    accountFillAllRegisterFields: 'Tüm alanları doldurman gerekiyor.',
+    accountPasswordsNoMatch: 'Şifreler eşleşmiyor.',
+    accountAgeTooLow: 'Kayıt için en az 13 yaşında olman gerekiyor.',
+    accountCompanyLabel: 'Şirket',
     accountForgotPassword: 'Şifremi unuttum',
     accountForgotPasswordNeedsEmail: 'Önce e-posta alanına adresini yaz.',
     accountResetSent: 'Şifre sıfırlama bağlantısı e-postana gönderildi.',
@@ -908,6 +924,13 @@ const TRANSLATIONS = {
     accountDeleted: 'Your account has been deleted.',
     accountNeedsReauth: 'You need to sign in again for this action. Log out, sign back in, then try again.',
     accountFillFields: 'Email and password are required.',
+    accountPassword2: 'Password (repeat)', accountFullName: 'Full Name', accountRegion: 'Region (e.g. Istanbul, Turkey)',
+    accountAge: 'Age', accountCompanyName: 'In-Game Company Name',
+    accountCompanyHint: 'Your company name will appear on your profile and factory sites.',
+    accountFillAllRegisterFields: 'All fields are required.',
+    accountPasswordsNoMatch: 'Passwords do not match.',
+    accountAgeTooLow: 'You must be at least 13 to register.',
+    accountCompanyLabel: 'Company',
     accountForgotPassword: 'Forgot password?',
     accountForgotPasswordNeedsEmail: 'Enter your email in the field above first.',
     accountResetSent: 'A password reset link has been sent to your email.',
@@ -2323,8 +2346,9 @@ const UI = {
 
     document.getElementById('btn-account').addEventListener('click', () => {
       UI.clearAccountError();
-      document.getElementById('account-email').value = '';
-      document.getElementById('account-password').value = '';
+      ['account-email','account-password','account-password2','account-fullname','account-region','account-age','account-company'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
       document.getElementById('account-change-password-form').classList.add('hidden');
       UI.toggleModal('account-modal', true);
     });
@@ -2348,9 +2372,21 @@ const UI = {
       UI.clearAccountError();
       const email = document.getElementById('account-email').value.trim();
       const password = document.getElementById('account-password').value;
-      if (!email || !password) { UI.showAccountError(Lang.t('accountFillFields')); return; }
+      const password2 = document.getElementById('account-password2').value;
+      const fullName = document.getElementById('account-fullname').value.trim();
+      const region = document.getElementById('account-region').value.trim();
+      const age = document.getElementById('account-age').value.trim();
+      const companyName = document.getElementById('account-company').value.trim();
+
+      if (!email || !password || !password2 || !fullName || !region || !age || !companyName) {
+        UI.showAccountError(Lang.t('accountFillAllRegisterFields')); return;
+      }
+      if (password !== password2) { UI.showAccountError(Lang.t('accountPasswordsNoMatch')); return; }
+      const ageNum = parseInt(age, 10);
+      if (!ageNum || ageNum < 13) { UI.showAccountError(Lang.t('accountAgeTooLow')); return; }
+
       try {
-        await Auth.register(email, password);
+        await Auth.register(email, password, { fullName, region, age: ageNum, companyName });
         UI.toggleModal('account-modal', false);
       } catch (err) {
         UI.showAccountError(Auth.friendlyError(err));
@@ -2561,6 +2597,14 @@ const UI = {
       loggedOutPanel.classList.add('hidden');
       loggedInPanel.classList.remove('hidden');
       document.getElementById('account-email-display').textContent = user.email;
+      const companyRow = document.getElementById('account-company-display-row');
+      companyRow.style.display = 'none';
+      Auth.getProfile(user.uid).then((profile) => {
+        if (profile && profile.companyName) {
+          document.getElementById('account-company-display').textContent = profile.companyName;
+          companyRow.style.display = 'block';
+        }
+      }).catch(() => {});
     } else {
       label.textContent = Lang.t('accountGuest');
       loggedOutPanel.classList.remove('hidden');
