@@ -71,6 +71,14 @@ h1.title span{color:var(--amber);}
 }
 .btn-account:hover{border-color:var(--amber-dim);}
 
+.btn-lang-float{
+  position:fixed;top:16px;right:16px;z-index:150;
+  font-family:var(--font-mono);font-weight:600;font-size:12px;
+  color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:5px;
+  padding:9px 13px;cursor:pointer;backdrop-filter:blur(4px);
+}
+.btn-lang-float:hover{border-color:var(--amber-dim);color:var(--amber);}
+
 /* Account modal (mirrors the in-game account modal, standalone here) */
 .modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(10,12,14,0.75);display:flex;align-items:center;justify-content:center;padding:20px;}
 .modal-backdrop.hidden{display:none;}
@@ -196,21 +204,22 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
 
 <div class="hazard-bar"></div>
 <div class="chip-field" id="chipField"></div>
+<button class="btn-lang-float" id="btn-landing-lang">🌐 EN</button>
 
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow">ÜRETİM YÖNETİMİ SİMÜLASYONU</div>
-    <h1 class="title">Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.</h1>
-    <p class="tagline">
+    <div class="eyebrow" data-i18n="eyebrow">ÜRETİM YÖNETİMİ SİMÜLASYONU</div>
+    <h1 class="title" data-i18n-html="heroTitle">Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.</h1>
+    <p class="tagline" data-i18n-html="heroTagline">
       Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla,
       teknoloji ağacında ilerle. <b>Tarayıcıda, kurulum yapmadan, ücretsiz</b> oynanır.
     </p>
     <div class="cta-row">
       <a class="btn-play" href="cnc-factory.html">
-        <span class="bolt"></span> Oynamaya Başla
+        <span class="bolt"></span> <span data-i18n="playBtn">Oynamaya Başla</span>
       </a>
-      <button class="btn-account" id="btn-landing-account">👤 <span id="landing-account-label">Giriş Yap / Kayıt Ol</span></button>
-      <span class="cta-note">İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır</span>
+      <button class="btn-account" id="btn-landing-account">👤 <span id="landing-account-label" data-i18n="accountLoginRegister">Giriş Yap / Kayıt Ol</span></button>
+      <span class="cta-note" data-i18n-html="ctaNote">İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır</span>
     </div>
   </div>
 </header>
@@ -219,8 +228,8 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   <section class="section" id="how">
     <div class="wrap">
       <div class="section-head">
-        <div class="section-tag">Üretim Hattı</div>
-        <h2 class="section-title">Nasıl oynanır</h2>
+        <div class="section-tag" data-i18n="howTag">Üretim Hattı</div>
+        <h2 class="section-title" data-i18n="howTitle">Nasıl oynanır</h2>
       </div>
       <div class="line">
         <div class="belt-dot" style="animation-delay:0s;"></div>
@@ -229,43 +238,43 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
         <div class="line-step">
           <div class="line-num">01</div>
           <div class="line-body">
-            <h3>Ham Madde İstasyonu kur</h3>
-            <p>Genel çelik stoğunu bantlara besleyen istasyonu zemine yerleştir. Çelik üst çubuktan satın alınır.</p>
+            <h3 data-i18n="step1Title">Ham Madde İstasyonu kur</h3>
+            <p data-i18n="step1Body">Genel çelik stoğunu bantlara besleyen istasyonu zemine yerleştir. Çelik üst çubuktan satın alınır.</p>
           </div>
         </div>
         <div class="line-step">
           <div class="line-num">02</div>
           <div class="line-body">
-            <h3>Konveyör bantlarını döşe</h3>
-            <p>Malzemeyi taşıyacak hattı çiz, yönünü ayarla. Yanlış yön ya da dolu hücre bandı tıkar — bunu canlı olarak görürsün.</p>
+            <h3 data-i18n="step2Title">Konveyör bantlarını döşe</h3>
+            <p data-i18n="step2Body">Malzemeyi taşıyacak hattı çiz, yönünü ayarla. Yanlış yön ya da dolu hücre bandı tıkar — bunu canlı olarak görürsün.</p>
           </div>
         </div>
         <div class="line-step">
           <div class="line-num">03</div>
           <div class="line-body">
-            <h3>CNC makinelerini bağla</h3>
-            <p>Freze, torna, router ya da ileri seviye 5-eksen makineyle çeliği braket, mil, dişli ve gövdeye işle. Makineler zamanla yıpranır, bakım gerektirir.</p>
+            <h3 data-i18n="step3Title">CNC makinelerini bağla</h3>
+            <p data-i18n="step3Body">Freze, torna, router ya da ileri seviye 5-eksen makineyle çeliği braket, mil, dişli ve gövdeye işle. Makineler zamanla yıpranır, bakım gerektirir.</p>
           </div>
         </div>
         <div class="line-step">
           <div class="line-num">04</div>
           <div class="line-body">
-            <h3>Sevkiyat Deposu'na aktar</h3>
-            <p>Biten parçalar depoya ulaşınca satılabilir envantere eklenir. İstersen Ar-Ge ile toplu satış da açabilirsin.</p>
+            <h3 data-i18n="step4Title">Sevkiyat Deposu'na aktar</h3>
+            <p data-i18n="step4Body">Biten parçalar depoya ulaşınca satılabilir envantere eklenir. İstersen Ar-Ge ile toplu satış da açabilirsin.</p>
           </div>
         </div>
         <div class="line-step">
           <div class="line-num">05</div>
           <div class="line-body">
-            <h3>Siparişleri karşıla, günlük kotayı tut</h3>
-            <p>Gelen müşteri siparişlerini zamanında teslim et, günlük üretim kotanı doldur — itibarın ve kâr marjın buna bağlı.</p>
+            <h3 data-i18n="step5Title">Siparişleri karşıla, günlük kotayı tut</h3>
+            <p data-i18n="step5Body">Gelen müşteri siparişlerini zamanında teslim et, günlük üretim kotanı doldur — itibarın ve kâr marjın buna bağlı.</p>
           </div>
         </div>
         <div class="line-step">
           <div class="line-num">06</div>
           <div class="line-body">
-            <h3>Ar-Ge yap, yeni saha aç, büyü</h3>
-            <p>Otomatik sevkiyat, hızlı bantlar ve ileri makineler için araştırma yap; yeterince büyüdüğünde ikinci bir fabrika sahası kur.</p>
+            <h3 data-i18n="step6Title">Ar-Ge yap, yeni saha aç, büyü</h3>
+            <p data-i18n="step6Body">Otomatik sevkiyat, hızlı bantlar ve ileri makineler için araştırma yap; yeterince büyüdüğünde ikinci bir fabrika sahası kur.</p>
           </div>
         </div>
       </div>
@@ -275,16 +284,16 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   <section class="section" id="preview">
     <div class="wrap">
       <div class="section-head">
-        <div class="section-tag">Fabrika Zemini</div>
-        <h2 class="section-title">Gerçek zamanlı üretim akışı</h2>
+        <div class="section-tag" data-i18n="previewTag">Fabrika Zemini</div>
+        <h2 class="section-title" data-i18n="previewTitle">Gerçek zamanlı üretim akışı</h2>
       </div>
       <div class="mock">
         <div class="mock-topbar">
           <span class="b">⚙ CNC FABRİKA</span>
-          <span class="mock-stat">Nakit <b>$12.480</b></span>
-          <span class="mock-stat">Çelik <b>34</b></span>
-          <span class="mock-stat">Gün <b>7</b></span>
-          <span class="mock-stat">🌙 Gece</span>
+          <span class="mock-stat"><span data-i18n="mockCash">Nakit</span> <b>$12.480</b></span>
+          <span class="mock-stat"><span data-i18n="mockSteel">Çelik</span> <b>34</b></span>
+          <span class="mock-stat"><span data-i18n="mockDay">Gün</span> <b>7</b></span>
+          <span class="mock-stat">🌙 <span data-i18n="mockNight">Gece</span></span>
         </div>
         <div class="mock-floor" id="mockFloor"></div>
       </div>
@@ -294,49 +303,49 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   <section class="section" id="features">
     <div class="wrap">
       <div class="section-head">
-        <div class="section-tag">Sistemler</div>
-        <h2 class="section-title">Yönetecek çok şey var</h2>
+        <div class="section-tag" data-i18n="featuresTag">Sistemler</div>
+        <h2 class="section-title" data-i18n="featuresTitle">Yönetecek çok şey var</h2>
       </div>
       <div class="station-grid">
         <div class="station-card">
           <div class="station-swatch" style="background:#5a636c;">🔗</div>
-          <h3>Lojistik &amp; konveyörler</h3>
-          <p>Malzeme akışını kendin tasarla; tıkanıklıklar canlı olarak zeminde görünür.</p>
+          <h3 data-i18n="feat1Title">Lojistik &amp; konveyörler</h3>
+          <p data-i18n="feat1Body">Malzeme akışını kendin tasarla; tıkanıklıklar canlı olarak zeminde görünür.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#c88a4a;">🔧</div>
-          <h3>Aşınma &amp; bakım</h3>
-          <p>Makineler yıpranır, arızalanır. Teknisyen kulübesiyle otomatik onarım kur.</p>
+          <h3 data-i18n="feat2Title">Aşınma &amp; bakım</h3>
+          <p data-i18n="feat2Body">Makineler yıpranır, arızalanır. Teknisyen kulübesiyle otomatik onarım kur.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#8a5f1e;color:#1a1400;">🔬</div>
-          <h3>Ar-Ge ağacı</h3>
-          <p>Toplu satış, otomatik sevkiyat, hızlı bant ve ileri CNC makinesinin kilidini aç.</p>
+          <h3 data-i18n="feat3Title">Ar-Ge ağacı</h3>
+          <p data-i18n="feat3Body">Toplu satış, otomatik sevkiyat, hızlı bant ve ileri CNC makinesinin kilidini aç.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#4fbf82;color:#0d1a12;">📈</div>
-          <h3>İtibar &amp; prestij</h3>
-          <p>Günlük kotayı tut, itibarını yükselt, prestij bonuslarıyla kalıcı avantaj kazan.</p>
+          <h3 data-i18n="feat4Title">İtibar &amp; prestij</h3>
+          <p data-i18n="feat4Body">Günlük kotayı tut, itibarını yükselt, prestij bonuslarıyla kalıcı avantaj kazan.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#e35d52;">💸</div>
-          <h3>Gerçekçi işletme giderleri</h3>
-          <p>Elektrik, su, maaş, yemek, servis ve iş güvenliği ekipmanı her gün otomatik kesilir.</p>
+          <h3 data-i18n="feat5Title">Gerçekçi işletme giderleri</h3>
+          <p data-i18n="feat5Body">Elektrik, su, maaş, yemek, servis ve iş güvenliği ekipmanı her gün otomatik kesilir.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#5aa3d0;">🏭</div>
-          <h3>Çoklu saha</h3>
-          <p>Tek sahayla sınırlı kalma — yeni fabrika sahaları açıp aynı anda büyüt.</p>
+          <h3 data-i18n="feat6Title">Çoklu saha</h3>
+          <p data-i18n="feat6Body">Tek sahayla sınırlı kalma — yeni fabrika sahaları açıp aynı anda büyüt.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#b06fd8;">📱</div>
-          <h3>Mobil uyumlu</h3>
-          <p>Dokunmatik kaydırma, pinch-zoom ve duyarlı arayüzle telefonda da rahatça oynanır.</p>
+          <h3 data-i18n="feat7Title">Mobil uyumlu</h3>
+          <p data-i18n="feat7Body">Dokunmatik kaydırma, pinch-zoom ve duyarlı arayüzle telefonda da rahatça oynanır.</p>
         </div>
         <div class="station-card">
           <div class="station-swatch" style="background:#e3b23c;color:#1a1400;">🌐</div>
-          <h3>TR / EN dil desteği</h3>
-          <p>Tüm arayüz iki dilde; tek tıkla anında dil değiştirilir.</p>
+          <h3 data-i18n="feat8Title">TR / EN dil desteği</h3>
+          <p data-i18n="feat8Body">Tüm arayüz iki dilde; tek tıkla anında dil değiştirilir.</p>
         </div>
       </div>
     </div>
@@ -346,36 +355,36 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
 <div id="landing-account-modal" class="modal-backdrop hidden">
   <div class="modal-panel">
     <div class="modal-header">
-      <h2>Hesap</h2>
+      <h2 data-i18n="accountModalTitle">Hesap</h2>
       <button id="btn-landing-account-close">✕</button>
     </div>
 
     <div id="landing-account-logged-out">
-      <p class="account-note">Hesap oluşturursan ilerlemen bulutta saklanır ve farklı cihazlardan aynı fabrikayla devam edebilirsin.</p>
-      <input type="email" id="landing-email" class="account-input" placeholder="E-posta" autocomplete="email">
-      <input type="password" id="landing-password" class="account-input" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+      <p class="account-note" data-i18n="accountGuestNote">Hesap oluşturursan ilerlemen bulutta saklanır ve farklı cihazlardan aynı fabrikayla devam edebilirsin.</p>
+      <input type="email" id="landing-email" class="account-input" data-i18n-placeholder="phEmail" placeholder="E-posta" autocomplete="email">
+      <input type="password" id="landing-password" class="account-input" data-i18n-placeholder="phPassword" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
       <div id="landing-register-fields">
-        <input type="password" id="landing-password2" class="account-input" placeholder="Şifre (tekrar)" autocomplete="new-password">
-        <input type="text" id="landing-fullname" class="account-input" placeholder="Adı Soyadı" autocomplete="name">
-        <input type="text" id="landing-region" class="account-input" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
-        <input type="number" id="landing-age" class="account-input" placeholder="Yaş" min="13" max="120">
-        <input type="text" id="landing-company" class="account-input" placeholder="Oyun İçi Şirket Adı" maxlength="30">
-        <div class="account-note" style="margin-top:-4px;">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
+        <input type="password" id="landing-password2" class="account-input" data-i18n-placeholder="phPassword2" placeholder="Şifre (tekrar)" autocomplete="new-password">
+        <input type="text" id="landing-fullname" class="account-input" data-i18n-placeholder="phFullName" placeholder="Adı Soyadı" autocomplete="name">
+        <input type="text" id="landing-region" class="account-input" data-i18n-placeholder="phRegion" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
+        <input type="number" id="landing-age" class="account-input" data-i18n-placeholder="phAge" placeholder="Yaş" min="13" max="120">
+        <input type="text" id="landing-company" class="account-input" data-i18n-placeholder="phCompany" placeholder="Oyun İçi Şirket Adı" maxlength="30">
+        <div class="account-note" style="margin-top:-4px;" data-i18n="companyHint">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
       </div>
       <div id="landing-account-error" class="account-error hidden"></div>
       <div class="account-btn-row">
-        <button id="btn-landing-login">Giriş Yap</button>
-        <button id="btn-landing-register">Kayıt Ol</button>
+        <button id="btn-landing-login" data-i18n="btnLogin">Giriş Yap</button>
+        <button id="btn-landing-register" data-i18n="btnRegister">Kayıt Ol</button>
       </div>
-      <button id="btn-landing-forgot" class="account-link-btn">Şifremi unuttum</button>
+      <button id="btn-landing-forgot" class="account-link-btn" data-i18n="forgotPassword">Şifremi unuttum</button>
     </div>
 
     <div id="landing-account-logged-in" class="hidden">
-      <p class="account-note">Giriş yapıldı: <b id="landing-email-display"></b></p>
-      <p class="account-note" id="landing-company-display-row" style="display:none;">🏢 <b id="landing-company-display"></b></p>
-      <p class="account-note" style="color:var(--green);">İlerlemen bulutla senkronize ediliyor.</p>
-      <button id="btn-landing-continue">Oynamaya Başla →</button>
-      <button id="btn-landing-logout" style="color:var(--red);border-color:var(--red);">Çıkış Yap</button>
+      <p class="account-note"><span data-i18n="loggedInAs">Giriş yapıldı:</span> <b id="landing-email-display"></b></p>
+      <p class="account-note" id="landing-company-display-row" style="display:none;">🏢 <span data-i18n="companyLabel">Şirket</span>: <b id="landing-company-display"></b></p>
+      <p class="account-note" style="color:var(--green);" data-i18n="syncNote">İlerlemen bulutla senkronize ediliyor.</p>
+      <button id="btn-landing-continue" data-i18n="continueBtn">Oynamaya Başla →</button>
+      <button id="btn-landing-logout" style="color:var(--red);border-color:var(--red);" data-i18n="logoutBtn">Çıkış Yap</button>
     </div>
   </div>
 </div>
@@ -384,13 +393,156 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   <div class="wrap">
     <div class="footer-row">
       <div class="footer-brand">⚙ CNC FABRİKA — v0.1</div>
-      <a class="footer-cta" href="cnc-factory.html">Oynamaya Başla →</a>
+      <a class="footer-cta" href="cnc-factory.html" data-i18n="continueBtn">Oynamaya Başla →</a>
     </div>
-    <div class="footnote">Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir. · <a href="privacy-policy.html" style="color:#5a636c;">Gizlilik Politikası</a> · <a href="account-deletion.html" style="color:#5a636c;">Hesap Silme</a></div>
+    <div class="footnote"><span data-i18n="footerText">Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.</span> · <a href="privacy-policy.html" style="color:#5a636c;" data-i18n="privacyLink">Gizlilik Politikası</a> · <a href="account-deletion.html" style="color:#5a636c;" data-i18n="deleteLink">Hesap Silme</a></div>
   </div>
 </footer>
 
 <script>
+/* ================================================================
+   i18n — mirrors the same pattern used in cnc-factory.html: a flat
+   TRANSLATIONS dict, a tiny Lang module, and data-i18n(-placeholder/-html)
+   attributes on the markup. Persisted via localStorage (this page always
+   runs in a real browser once deployed, unlike Claude's artifact preview).
+   ================================================================ */
+const TRANSLATIONS = {
+  tr: {
+    eyebrow: 'ÜRETİM YÖNETİMİ SİMÜLASYONU',
+    heroTitle: 'Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.',
+    heroTagline: 'Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla, teknoloji ağacında ilerle. <b>Tarayıcıda, kurulum yapmadan, ücretsiz</b> oynanır.',
+    playBtn: 'Oynamaya Başla',
+    accountLoginRegister: 'Giriş Yap / Kayıt Ol',
+    ctaNote: 'İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır',
+
+    howTag: 'Üretim Hattı', howTitle: 'Nasıl oynanır',
+    step1Title: 'Ham Madde İstasyonu kur',
+    step1Body: 'Genel çelik stoğunu bantlara besleyen istasyonu zemine yerleştir. Çelik üst çubuktan satın alınır.',
+    step2Title: 'Konveyör bantlarını döşe',
+    step2Body: 'Malzemeyi taşıyacak hattı çiz, yönünü ayarla. Yanlış yön ya da dolu hücre bandı tıkar — bunu canlı olarak görürsün.',
+    step3Title: 'CNC makinelerini bağla',
+    step3Body: 'Freze, torna, router ya da ileri seviye 5-eksen makineyle çeliği braket, mil, dişli ve gövdeye işle. Makineler zamanla yıpranır, bakım gerektirir.',
+    step4Title: "Sevkiyat Deposu'na aktar",
+    step4Body: 'Biten parçalar depoya ulaşınca satılabilir envantere eklenir. İstersen Ar-Ge ile toplu satış da açabilirsin.',
+    step5Title: 'Siparişleri karşıla, günlük kotayı tut',
+    step5Body: 'Gelen müşteri siparişlerini zamanında teslim et, günlük üretim kotanı doldur — itibarın ve kâr marjın buna bağlı.',
+    step6Title: 'Ar-Ge yap, yeni saha aç, büyü',
+    step6Body: 'Otomatik sevkiyat, hızlı bantlar ve ileri makineler için araştırma yap; yeterince büyüdüğünde ikinci bir fabrika sahası kur.',
+
+    previewTag: 'Fabrika Zemini', previewTitle: 'Gerçek zamanlı üretim akışı',
+    mockCash: 'Nakit', mockSteel: 'Çelik', mockDay: 'Gün', mockNight: 'Gece',
+
+    featuresTag: 'Sistemler', featuresTitle: 'Yönetecek çok şey var',
+    feat1Title: 'Lojistik & konveyörler', feat1Body: 'Malzeme akışını kendin tasarla; tıkanıklıklar canlı olarak zeminde görünür.',
+    feat2Title: 'Aşınma & bakım', feat2Body: 'Makineler yıpranır, arızalanır. Teknisyen kulübesiyle otomatik onarım kur.',
+    feat3Title: 'Ar-Ge ağacı', feat3Body: 'Toplu satış, otomatik sevkiyat, hızlı bant ve ileri CNC makinesinin kilidini aç.',
+    feat4Title: 'İtibar & prestij', feat4Body: 'Günlük kotayı tut, itibarını yükselt, prestij bonuslarıyla kalıcı avantaj kazan.',
+    feat5Title: 'Gerçekçi işletme giderleri', feat5Body: 'Elektrik, su, maaş, yemek, servis ve iş güvenliği ekipmanı her gün otomatik kesilir.',
+    feat6Title: 'Çoklu saha', feat6Body: 'Tek sahayla sınırlı kalma — yeni fabrika sahaları açıp aynı anda büyüt.',
+    feat7Title: 'Mobil uyumlu', feat7Body: 'Dokunmatik kaydırma, pinch-zoom ve duyarlı arayüzle telefonda da rahatça oynanır.',
+    feat8Title: 'TR / EN dil desteği', feat8Body: 'Tüm arayüz iki dilde; tek tıkla anında dil değiştirilir.',
+
+    accountModalTitle: 'Hesap',
+    accountGuestNote: 'Hesap oluşturursan ilerlemen bulutta saklanır ve farklı cihazlardan aynı fabrikayla devam edebilirsin.',
+    phEmail: 'E-posta', phPassword: 'Şifre (en az 6 karakter)', phPassword2: 'Şifre (tekrar)',
+    phFullName: 'Adı Soyadı', phRegion: 'Bölge (örn: İstanbul, Türkiye)', phAge: 'Yaş', phCompany: 'Oyun İçi Şirket Adı',
+    companyHint: 'Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.',
+    btnLogin: 'Giriş Yap', btnRegister: 'Kayıt Ol', forgotPassword: 'Şifremi unuttum',
+    loggedInAs: 'Giriş yapıldı:', companyLabel: 'Şirket', syncNote: 'İlerlemen bulutla senkronize ediliyor.',
+    continueBtn: 'Oynamaya Başla →', logoutBtn: 'Çıkış Yap',
+    footerText: 'Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.',
+    privacyLink: 'Gizlilik Politikası', deleteLink: 'Hesap Silme',
+
+    errFillFields: 'E-posta ve şifre gerekli.',
+    errFillAll: 'Tüm alanları doldurman gerekiyor.',
+    errPasswordsNoMatch: 'Şifreler eşleşmiyor.',
+    errWeakPassword: 'Şifre en az 6 karakter olmalı.',
+    errAgeTooLow: 'Kayıt için en az 13 yaşında olman gerekiyor.',
+    errNeedEmail: 'Önce e-posta alanına adresini yaz.',
+    resetSent: 'Şifre sıfırlama bağlantısı e-postana gönderildi.',
+  },
+  en: {
+    eyebrow: 'PRODUCTION MANAGEMENT SIMULATION',
+    heroTitle: 'Build, grow, and run<br>your own <span>CNC factory</span>.',
+    heroTagline: 'Set up the whole line yourself, from raw steel to order delivery: place machines, connect conveyor belts, and progress through the tech tree. <b>Free to play in your browser</b>, no install needed.',
+    playBtn: 'Start Playing',
+    accountLoginRegister: 'Log In / Register',
+    ctaNote: 'Your progress is <b>saved automatically</b> · Works on mobile and desktop',
+
+    howTag: 'Production Line', howTitle: 'How to play',
+    step1Title: 'Build a Raw Material Depot',
+    step1Body: 'Place the station that feeds your shared steel stock onto belts. Steel is bought from the top bar.',
+    step2Title: 'Lay down conveyor belts',
+    step2Body: "Draw the route material will travel and set its direction. A wrong direction or full tile jams the belt — you'll see it live.",
+    step3Title: 'Connect CNC machines',
+    step3Body: 'Use a mill, lathe, router, or the advanced 5-axis machine to turn steel into brackets, shafts, gears, and housings. Machines wear down over time and need maintenance.',
+    step4Title: 'Route parts to a Shipping Warehouse',
+    step4Body: 'Finished parts become sellable inventory once they reach a warehouse. You can also unlock bulk selling via research.',
+    step5Title: 'Fulfill orders and hit your daily quota',
+    step5Body: 'Deliver customer orders on time and fill your daily production quota — your reputation and profit margin depend on it.',
+    step6Title: 'Research, expand, and grow',
+    step6Body: 'Research automated delivery, faster belts, and advanced machines; open a second factory site once you have outgrown the first.',
+
+    previewTag: 'Factory Floor', previewTitle: 'Real-time production flow',
+    mockCash: 'Cash', mockSteel: 'Steel', mockDay: 'Day', mockNight: 'Night',
+
+    featuresTag: 'Systems', featuresTitle: 'A lot to manage',
+    feat1Title: 'Logistics & conveyors', feat1Body: 'Design your own material flow; jams show up live on the floor.',
+    feat2Title: 'Wear & maintenance', feat2Body: 'Machines wear down and break. Set up a technician hut for automatic repairs.',
+    feat3Title: 'Tech tree', feat3Body: 'Unlock bulk selling, automated delivery, faster belts, and the advanced CNC machine.',
+    feat4Title: 'Reputation & prestige', feat4Body: 'Hit your daily quota, build reputation, and earn permanent bonuses through prestige.',
+    feat5Title: 'Realistic operating costs', feat5Body: 'Electricity, water, salaries, meals, transport, and safety gear are deducted automatically every day.',
+    feat6Title: 'Multiple sites', feat6Body: "Don't stay limited to one site — open new factory sites and grow them all at once.",
+    feat7Title: 'Mobile-friendly', feat7Body: 'Touch panning, pinch-zoom, and a responsive layout make it comfortable on phones too.',
+    feat8Title: 'TR / EN language support', feat8Body: 'The whole interface is bilingual; switch instantly with one tap.',
+
+    accountModalTitle: 'Account',
+    accountGuestNote: 'Registering keeps your progress in the cloud so you can continue on other devices too.',
+    phEmail: 'Email', phPassword: 'Password (min. 6 characters)', phPassword2: 'Password (repeat)',
+    phFullName: 'Full Name', phRegion: 'Region (e.g. Istanbul, Turkey)', phAge: 'Age', phCompany: 'In-Game Company Name',
+    companyHint: 'Your company name will appear on your profile and factory sites.',
+    btnLogin: 'Log In', btnRegister: 'Register', forgotPassword: 'Forgot password?',
+    loggedInAs: 'Signed in as:', companyLabel: 'Company', syncNote: 'Your progress is syncing with the cloud.',
+    continueBtn: 'Start Playing →', logoutBtn: 'Log Out',
+    footerText: 'A browser-based management simulation. Your progress syncs with your account.',
+    privacyLink: 'Privacy Policy', deleteLink: 'Delete Account',
+
+    errFillFields: 'Email and password are required.',
+    errFillAll: 'All fields are required.',
+    errPasswordsNoMatch: 'Passwords do not match.',
+    errWeakPassword: 'Password must be at least 6 characters.',
+    errAgeTooLow: 'You must be at least 13 to register.',
+    errNeedEmail: 'Enter your email in the field above first.',
+    resetSent: 'A password reset link has been sent to your email.',
+  },
+};
+
+const Lang = {
+  current: (function() {
+    try { return localStorage.getItem('cnc-landing-lang') === 'en' ? 'en' : 'tr'; }
+    catch (e) { return 'tr'; }
+  })(),
+  t(key) { return (TRANSLATIONS[Lang.current] && TRANSLATIONS[Lang.current][key]) ?? TRANSLATIONS.tr[key] ?? key; },
+  apply() {
+    document.documentElement.lang = Lang.current;
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = Lang.t(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = Lang.t(el.dataset.i18nHtml); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = Lang.t(el.dataset.i18nPlaceholder); });
+    const langBtn = document.getElementById('btn-landing-lang');
+    if (langBtn) langBtn.textContent = Lang.current === 'en' ? '🌐 TR' : '🌐 EN';
+    // Re-apply the login-state-dependent label, since it's set dynamically
+    // by the account script rather than being purely static markup.
+    if (typeof window.refreshLandingAccountLabel === 'function') window.refreshLandingAccountLabel();
+  },
+  toggle() {
+    Lang.current = Lang.current === 'tr' ? 'en' : 'tr';
+    try { localStorage.setItem('cnc-landing-lang', Lang.current); } catch (e) {}
+    Lang.apply();
+  },
+};
+Lang.apply();
+document.getElementById('btn-landing-lang').addEventListener('click', () => Lang.toggle());
+
 (function(){
   const colors = ['#5aa3d0','#4fbf82','#e3b23c','#b06fd8','#f0a030'];
   const field = document.getElementById('chipField');
@@ -478,11 +630,15 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
         }
       }).catch(() => {});
     } else {
-      label.textContent = 'Giriş Yap / Kayıt Ol';
+      label.textContent = Lang.t('accountLoginRegister');
       loggedOut.classList.remove('hidden');
       loggedIn.classList.add('hidden');
     }
   }
+  // Lang.apply() calls this after switching languages, so the label
+  // reflects both the current language AND whether someone's logged in
+  // (label.textContent is set dynamically, so plain data-i18n can't cover it).
+  window.refreshLandingAccountLabel = () => refresh(typeof Auth !== 'undefined' ? Auth.currentUser : null);
 
   document.getElementById('btn-landing-account').addEventListener('click', openModal);
   document.getElementById('btn-landing-account-close').addEventListener('click', closeModal);
@@ -492,12 +648,12 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     clearError();
     const email = document.getElementById('landing-email').value.trim();
     const password = document.getElementById('landing-password').value;
-    if (!email || !password) { showError('E-posta ve şifre gerekli.'); return; }
+    if (!email || !password) { showError(Lang.t('errFillFields')); return; }
     try {
       await Auth.login(email, password);
       closeModal();
     } catch (err) {
-      showError(Auth.friendlyError(err));
+      showError(Auth.friendlyError(err, Lang.current));
     }
   });
   document.getElementById('btn-landing-register').addEventListener('click', async () => {
@@ -511,18 +667,18 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     const companyName = document.getElementById('landing-company').value.trim();
 
     if (!email || !password || !password2 || !fullName || !region || !age || !companyName) {
-      showError('Tüm alanları doldurman gerekiyor.'); return;
+      showError(Lang.t('errFillAll')); return;
     }
-    if (password !== password2) { showError('Şifreler eşleşmiyor.'); return; }
-    if (password.length < 6) { showError('Şifre en az 6 karakter olmalı.'); return; }
+    if (password !== password2) { showError(Lang.t('errPasswordsNoMatch')); return; }
+    if (password.length < 6) { showError(Lang.t('errWeakPassword')); return; }
     const ageNum = parseInt(age, 10);
-    if (!ageNum || ageNum < 13) { showError('Kayıt için en az 13 yaşında olman gerekiyor.'); return; }
+    if (!ageNum || ageNum < 13) { showError(Lang.t('errAgeTooLow')); return; }
 
     try {
       await Auth.register(email, password, { fullName, region, age: ageNum, companyName });
       closeModal();
     } catch (err) {
-      showError(Auth.friendlyError(err));
+      showError(Auth.friendlyError(err, Lang.current));
     }
   });
   document.getElementById('btn-landing-logout').addEventListener('click', async () => {
@@ -534,15 +690,15 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
   document.getElementById('btn-landing-forgot').addEventListener('click', async () => {
     clearError();
     const email = document.getElementById('landing-email').value.trim();
-    if (!email) { showError('Önce e-posta alanına adresini yaz.'); return; }
+    if (!email) { showError(Lang.t('errNeedEmail')); return; }
     try {
       await Auth.sendPasswordReset(email);
-      showError('Şifre sıfırlama bağlantısı e-postana gönderildi.');
+      showError(Lang.t('resetSent'));
       errorEl.style.color = 'var(--green)';
       errorEl.style.background = 'rgba(79,191,130,0.1)';
       errorEl.style.borderColor = 'rgba(79,191,130,0.3)';
     } catch (err) {
-      showError(Auth.friendlyError(err));
+      showError(Auth.friendlyError(err, Lang.current));
     }
   });
 
