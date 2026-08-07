@@ -104,13 +104,16 @@ h1.title span{color:var(--amber);}
   color:var(--text-dim);font-family:var(--font-mono);font-size:11.5px;text-decoration:underline;cursor:pointer;
 }
 .account-link-btn:hover{color:var(--amber);}
-.account-btn-row button, #landing-account-logged-in button{
+.account-btn-row button, #landing-account-logged-in button, #btn-landing-send-reset,
+#btn-landing-login, #btn-landing-register{
   font-family:var(--font-mono);font-size:12.5px;padding:11px;border-radius:4px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--text);
 }
-#btn-landing-login{color:var(--amber);border-color:var(--amber-dim);}
-#btn-landing-register{color:var(--green);border-color:var(--green);}
 #landing-account-logged-in button{width:100%;margin-bottom:8px;}
 #btn-landing-continue{color:var(--amber);border-color:var(--amber-dim);}
+#btn-landing-send-reset{width:100%;margin-bottom:8px;color:var(--amber);border-color:var(--amber-dim);}
+#btn-landing-login, #btn-landing-register{width:100%;margin-bottom:8px;}
+#btn-landing-login{color:var(--amber);border-color:var(--amber-dim);}
+#btn-landing-register{color:var(--green);border-color:var(--green);}
 .hidden{display:none;}
 
 .chip-field{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:-1;}
@@ -212,7 +215,7 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     <h1 class="title" data-i18n-html="heroTitle">Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.</h1>
     <p class="tagline" data-i18n-html="heroTagline">
       Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla,
-      teknoloji ağacında ilerle.
+      teknoloji ağacında ilerle. <b>Tarayıcıda, kurulum yapmadan, ücretsiz</b> oynanır.
     </p>
     <div class="cta-row">
       <a class="btn-play" href="cnc-factory.html">
@@ -362,21 +365,31 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     <div id="landing-account-logged-out">
       <p class="account-note" data-i18n="accountGuestNote">Hesap oluşturursan ilerlemen bulutta saklanır ve farklı cihazlardan aynı fabrikayla devam edebilirsin.</p>
       <input type="email" id="landing-email" class="account-input" data-i18n-placeholder="phEmail" placeholder="E-posta" autocomplete="email">
-      <input type="password" id="landing-password" class="account-input" data-i18n-placeholder="phPassword" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
-      <div id="landing-register-fields">
-        <input type="password" id="landing-password2" class="account-input" data-i18n-placeholder="phPassword2" placeholder="Şifre (tekrar)" autocomplete="new-password">
-        <input type="text" id="landing-fullname" class="account-input" data-i18n-placeholder="phFullName" placeholder="Adı Soyadı" autocomplete="name">
-        <input type="text" id="landing-region" class="account-input" data-i18n-placeholder="phRegion" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
-        <input type="number" id="landing-age" class="account-input" data-i18n-placeholder="phAge" placeholder="Yaş" min="13" max="120">
-        <input type="text" id="landing-company" class="account-input" data-i18n-placeholder="phCompany" placeholder="Oyun İçi Şirket Adı" maxlength="30">
-        <div class="account-note" style="margin-top:-4px;" data-i18n="companyHint">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
-      </div>
-      <div id="landing-account-error" class="account-error hidden"></div>
-      <div class="account-btn-row">
+
+      <div id="landing-normal-fields">
+        <input type="password" id="landing-password" class="account-input" data-i18n-placeholder="phPassword" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+        <div id="landing-register-fields" class="hidden">
+          <input type="password" id="landing-password2" class="account-input" data-i18n-placeholder="phPassword2" placeholder="Şifre (tekrar)" autocomplete="new-password">
+          <input type="text" id="landing-fullname" class="account-input" data-i18n-placeholder="phFullName" placeholder="Adı Soyadı" autocomplete="name">
+          <input type="text" id="landing-region" class="account-input" data-i18n-placeholder="phRegion" placeholder="Bölge (örn: İstanbul, Türkiye)" autocomplete="address-level2">
+          <input type="number" id="landing-age" class="account-input" data-i18n-placeholder="phAge" placeholder="Yaş" min="13" max="120">
+          <input type="text" id="landing-company" class="account-input" data-i18n-placeholder="phCompany" placeholder="Oyun İçi Şirket Adı" maxlength="30">
+          <div class="account-note" style="margin-top:-4px;" data-i18n="companyHint">Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.</div>
+        </div>
         <button id="btn-landing-login" data-i18n="btnLogin">Giriş Yap</button>
-        <button id="btn-landing-register" data-i18n="btnRegister">Kayıt Ol</button>
+        <button id="btn-landing-register" class="hidden" data-i18n="btnRegister">Kayıt Ol</button>
+        <button id="btn-landing-switch-to-register" class="account-link-btn" data-i18n="needAccount">Hesabın yok mu? Kayıt Ol</button>
+        <button id="btn-landing-switch-to-login" class="account-link-btn hidden" data-i18n="haveAccount">Zaten hesabın var mı? Giriş Yap</button>
       </div>
+
+      <div id="landing-account-error" class="account-error hidden"></div>
+
       <button id="btn-landing-forgot" class="account-link-btn" data-i18n="forgotPassword">Şifremi unuttum</button>
+
+      <div id="landing-forgot-actions" class="hidden">
+        <button id="btn-landing-send-reset" data-i18n="sendResetLink">Sıfırlama Bağlantısı Gönder</button>
+        <button id="btn-landing-forgot-back" class="account-link-btn" data-i18n="backToLogin">← Geri dön</button>
+      </div>
     </div>
 
     <div id="landing-account-logged-in" class="hidden">
@@ -448,6 +461,8 @@ const TRANSLATIONS = {
     phFullName: 'Adı Soyadı', phRegion: 'Bölge (örn: İstanbul, Türkiye)', phAge: 'Yaş', phCompany: 'Oyun İçi Şirket Adı',
     companyHint: 'Şirket adı, oyuncu profilinde ve fabrika sahalarında görünecek.',
     btnLogin: 'Giriş Yap', btnRegister: 'Kayıt Ol', forgotPassword: 'Şifremi unuttum',
+    sendResetLink: 'Sıfırlama Bağlantısı Gönder', backToLogin: '← Geri dön',
+    needAccount: 'Hesabın yok mu? Kayıt Ol', haveAccount: 'Zaten hesabın var mı? Giriş Yap',
     loggedInAs: 'Giriş yapıldı:', companyLabel: 'Şirket', syncNote: 'İlerlemen bulutla senkronize ediliyor.',
     continueBtn: 'Oynamaya Başla →', logoutBtn: 'Çıkış Yap',
     footerText: 'Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.',
@@ -502,6 +517,8 @@ const TRANSLATIONS = {
     phFullName: 'Full Name', phRegion: 'Region (e.g. Istanbul, Turkey)', phAge: 'Age', phCompany: 'In-Game Company Name',
     companyHint: 'Your company name will appear on your profile and factory sites.',
     btnLogin: 'Log In', btnRegister: 'Register', forgotPassword: 'Forgot password?',
+    sendResetLink: 'Send Reset Link', backToLogin: '← Back',
+    needAccount: 'Need an account? Register', haveAccount: 'Already have an account? Log In',
     loggedInAs: 'Signed in as:', companyLabel: 'Company', syncNote: 'Your progress is syncing with the cloud.',
     continueBtn: 'Start Playing →', logoutBtn: 'Log Out',
     footerText: 'A browser-based management simulation. Your progress syncs with your account.',
@@ -611,9 +628,32 @@ document.getElementById('btn-landing-lang').addEventListener('click', () => Lang
     ['landing-email','landing-password','landing-password2','landing-fullname','landing-region','landing-age','landing-company'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    showForgotMode(false);
+    setAuthMode('login');
     modal.classList.remove('hidden');
   }
   function closeModal() { modal.classList.add('hidden'); }
+
+  // Switches between "login" (email + password only) and "register"
+  // (adds password confirm / name / region / age / company name).
+  function setAuthMode(mode) {
+    const isRegister = mode === 'register';
+    document.getElementById('landing-register-fields').classList.toggle('hidden', !isRegister);
+    document.getElementById('btn-landing-login').classList.toggle('hidden', isRegister);
+    document.getElementById('btn-landing-register').classList.toggle('hidden', !isRegister);
+    document.getElementById('btn-landing-switch-to-register').classList.toggle('hidden', isRegister);
+    document.getElementById('btn-landing-switch-to-login').classList.toggle('hidden', !isRegister);
+    clearError();
+  }
+
+  // Toggles between the normal login/register view and the "forgot
+  // password" view, which only asks for an email — nothing else.
+  function showForgotMode(on) {
+    document.getElementById('landing-normal-fields').classList.toggle('hidden', on);
+    document.getElementById('btn-landing-forgot').classList.toggle('hidden', on);
+    document.getElementById('landing-forgot-actions').classList.toggle('hidden', !on);
+    clearError();
+  }
 
   function refresh(user) {
     if (user) {
@@ -687,7 +727,19 @@ document.getElementById('btn-landing-lang').addEventListener('click', () => Lang
   document.getElementById('btn-landing-continue').addEventListener('click', () => {
     window.location.href = 'cnc-factory.html';
   });
-  document.getElementById('btn-landing-forgot').addEventListener('click', async () => {
+  document.getElementById('btn-landing-forgot').addEventListener('click', () => {
+    showForgotMode(true);
+  });
+  document.getElementById('btn-landing-forgot-back').addEventListener('click', () => {
+    showForgotMode(false);
+  });
+  document.getElementById('btn-landing-switch-to-register').addEventListener('click', () => {
+    setAuthMode('register');
+  });
+  document.getElementById('btn-landing-switch-to-login').addEventListener('click', () => {
+    setAuthMode('login');
+  });
+  document.getElementById('btn-landing-send-reset').addEventListener('click', async () => {
     clearError();
     const email = document.getElementById('landing-email').value.trim();
     if (!email) { showError(Lang.t('errNeedEmail')); return; }
