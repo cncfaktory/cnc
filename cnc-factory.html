@@ -51,7 +51,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 #app{display:flex;flex-direction:column;height:100vh;width:100vw;}
 
 #topbar{
-  display:flex;align-items:center;gap:24px;
+  display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;
   padding:10px 18px;background:var(--panel);
   border-bottom:2px solid var(--amber-dim);
   flex-shrink:0;
@@ -498,7 +498,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     </div>
 
     <div id="account-logged-out">
-      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yapıldı.Şifre işlemleri ve hesap verilerini aşağıdan güncelleyebilirsin.</p>
+      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yapmadın — ilerlemen sadece bu cihazda saklanır. Hesap oluşturmak veya giriş yapmak için ana sayfaya dön.</p>
       <a id="btn-account-go-landing" class="save-btn" href="index.html" style="width:100%;display:block;text-align:center;box-sizing:border-box;text-decoration:none;color:var(--amber);border-color:var(--amber-dim);" data-i18n="accountGoLanding">Ana Sayfaya Dön</a>
     </div>
 
