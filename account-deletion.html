@@ -130,6 +130,9 @@ a{color:var(--amber);}
     clearMsg();
     try {
       await Auth.deleteAccount();
+      // Otherwise a new account created later on this same device/browser
+      // would inherit the deleted account's leftover local save on first login.
+      try { localStorage.removeItem('cnc-factory-save-v3'); } catch (e) {}
       document.getElementById('confirm-step').innerHTML = '<p style="color:var(--green);font-size:13px;">✓ Hesabın ve tüm verilerin kalıcı olarak silindi.</p>';
     } catch (err) {
       if (err.code === 'auth/requires-recent-login') {

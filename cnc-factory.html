@@ -2115,6 +2115,22 @@ const Input = {
    ================================================================ */
 const SaveSystem = {
   KEY: 'cnc-factory-save-v3',
+  // Wipes the on-device save. Used after account deletion — without this,
+  // a brand-new account created on the same device would "adopt" the old
+  // account's leftover local save the moment it signs in (see load()'s
+  // adopt-local-save-into-new-account path below), making a fresh account
+  // look like it's continuing the deleted one.
+  async clearLocal() {
+    try {
+      if (SaveSystem.hasClaudeStorage()) {
+        await window.storage.delete(SaveSystem.KEY, false);
+      } else if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(SaveSystem.KEY);
+      }
+    } catch (err) {
+      console.warn('clearLocal failed', err);
+    }
+  },
   buildSaveObject() {
     return {
       money: State.money,
@@ -2351,8 +2367,10 @@ const UI = {
       if (!confirm(Lang.t('accountDeleteConfirm'))) return;
       try {
         await Auth.deleteAccount();
+        await SaveSystem.clearLocal(); // otherwise a new account on this device would inherit the deleted one's local save
         UI.toggleModal('account-modal', false);
         UI.toast(Lang.t('accountDeleted'));
+        setTimeout(() => location.reload(), 1500); // reload so the session starts genuinely fresh, not just visually reset
       } catch (err) {
         if (err.code === 'auth/requires-recent-login') {
           UI.showAccountError(Lang.t('accountNeedsReauth'));
