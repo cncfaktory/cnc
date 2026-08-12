@@ -2370,7 +2370,7 @@ const UI = {
         await SaveSystem.clearLocal(); // otherwise a new account on this device would inherit the deleted one's local save
         UI.toggleModal('account-modal', false);
         UI.toast(Lang.t('accountDeleted'));
-        setTimeout(() => location.reload(), 1500); // reload so the session starts genuinely fresh, not just visually reset
+        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
       } catch (err) {
         if (err.code === 'auth/requires-recent-login') {
           UI.showAccountError(Lang.t('accountNeedsReauth'));
