@@ -2361,7 +2361,7 @@ const UI = {
     });
     document.getElementById('btn-account-logout').addEventListener('click', async () => {
       await Auth.logout();
-      UI.toggleModal('account-modal', false);
+      window.location.href = 'index.html';
     });
     document.getElementById('btn-account-delete').addEventListener('click', async () => {
       if (!confirm(Lang.t('accountDeleteConfirm'))) return;
