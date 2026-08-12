@@ -190,7 +190,7 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
 .footer-brand{font-family:var(--font-display);font-weight:600;color:var(--text-dim);font-size:13px;}
 .footer-cta{
   font-family:var(--font-mono);font-size:12px;color:var(--amber);text-decoration:none;
-  border:1px solid var(--amber-dim);border-radius:4px;padding:9px 16px;
+  border:1px solid var(--amber-dim);border-radius:4px;padding:9px 16px;background:transparent;cursor:pointer;
 }
 .footer-cta:hover{border-color:var(--amber);}
 .footnote{margin-top:20px;font-size:11px;color:#5a636c;}
@@ -215,14 +215,13 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
     <h1 class="title" data-i18n-html="heroTitle">Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.</h1>
     <p class="tagline" data-i18n-html="heroTagline">
       Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla,
-      teknoloji ağacında ilerle. <b> Mobil ve Tarayıcıda ücretsiz</b> oynanır.
+      teknoloji ağacında ilerle. <b>Mobil ve Tarayıcıda, ücretsiz</b> oynanır.
     </p>
     <div class="cta-row">
-      <a class="btn-play" href="cnc-factory.html">
-        <span class="bolt"></span> <span data-i18n="playBtn">Oynamaya Başla</span>
-      </a>
-      <button class="btn-account" id="btn-landing-account">👤 <span id="landing-account-label" data-i18n="accountLoginRegister">Giriş Yap / Kayıt Ol</span></button>
-      <span class="cta-note" data-i18n-html="ctaNote">İlerlemen <b>otomatik kaydedilir</b> · Mobil ve Tarayıcıda çalışır</span>
+      <button class="btn-play" id="btn-landing-account">
+        <span class="bolt"></span> <span id="landing-account-label" data-i18n="accountLoginRegister">Giriş Yap / Kayıt Ol</span>
+      </button>
+      <span class="cta-note" data-i18n-html="ctaNote">İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır</span>
     </div>
   </div>
 </header>
@@ -405,8 +404,8 @@ footer{padding:48px 0 60px;border-top:1px solid var(--line-soft);}
 <footer>
   <div class="wrap">
     <div class="footer-row">
-      <div class="footer-brand">© 2026 CNC FABRİKA Tüm Hakları Saklıdır. ⚙ CNC FABRİKA — v0.1</div>
-      <a class="footer-cta" href="cnc-factory.html" data-i18n="continueBtn">Oynamaya Başla →</a>
+      <div class="footer-brand">⚙ CNC FABRİKA — v0.1</div>
+      <button class="footer-cta" id="btn-footer-account" data-i18n="footerAccountBtn">Giriş Yap / Kayıt Ol →</button>
     </div>
     <div class="footnote"><span data-i18n="footerText">Mobil ve Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.</span> · <a href="privacy-policy.html" style="color:#5a636c;" data-i18n="privacyLink">Gizlilik Politikası</a> · <a href="account-deletion.html" style="color:#5a636c;" data-i18n="deleteLink">Hesap Silme</a></div>
   </div>
@@ -423,10 +422,10 @@ const TRANSLATIONS = {
   tr: {
     eyebrow: 'ÜRETİM YÖNETİMİ SİMÜLASYONU',
     heroTitle: 'Kendi <span>CNC fabrikanı</span><br>kur, büyüt, yönet.',
-    heroTagline: 'Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla, teknoloji ağacında ilerle. <b>Mobil ve Tarayıcıda ücretsiz</b> oynanır.',
+    heroTagline: 'Ham çelikten sipariş teslimatına kadar tüm hattı sen kur: makineleri yerleştir, konveyör bantlarıyla bağla, teknoloji ağacında ilerle. <b>Mobil ve Tarayıcıda, ücretsiz</b> oynanır.',
     playBtn: 'Oynamaya Başla',
     accountLoginRegister: 'Giriş Yap / Kayıt Ol',
-    ctaNote: 'İlerlemen <b>otomatik kaydedilir</b> · Mobil ve Tarayıcıda çalışır',
+    ctaNote: 'İlerlemen <b>otomatik kaydedilir</b> · Mobil ve masaüstünde çalışır',
 
     howTag: 'Üretim Hattı', howTitle: 'Nasıl oynanır',
     step1Title: 'Ham Madde İstasyonu kur',
@@ -465,7 +464,8 @@ const TRANSLATIONS = {
     needAccount: 'Hesabın yok mu? Kayıt Ol', haveAccount: 'Zaten hesabın var mı? Giriş Yap',
     loggedInAs: 'Giriş yapıldı:', companyLabel: 'Şirket', syncNote: 'İlerlemen bulutla senkronize ediliyor.',
     continueBtn: 'Oynamaya Başla →', logoutBtn: 'Çıkış Yap',
-    footerText: 'Mobil ve Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.',
+    footerAccountBtn: 'Giriş Yap / Kayıt Ol →',
+    footerText: 'Tarayıcı tabanlı yönetim simülasyonu. İlerlemen hesabınla senkronize edilir.',
     privacyLink: 'Gizlilik Politikası', deleteLink: 'Hesap Silme',
 
     errFillFields: 'E-posta ve şifre gerekli.',
@@ -521,6 +521,7 @@ const TRANSLATIONS = {
     needAccount: 'Need an account? Register', haveAccount: 'Already have an account? Log In',
     loggedInAs: 'Signed in as:', companyLabel: 'Company', syncNote: 'Your progress is syncing with the cloud.',
     continueBtn: 'Start Playing →', logoutBtn: 'Log Out',
+    footerAccountBtn: 'Log In / Register →',
     footerText: 'A browser-based management simulation. Your progress syncs with your account.',
     privacyLink: 'Privacy Policy', deleteLink: 'Delete Account',
 
@@ -681,6 +682,7 @@ document.getElementById('btn-landing-lang').addEventListener('click', () => Lang
   window.refreshLandingAccountLabel = () => refresh(typeof Auth !== 'undefined' ? Auth.currentUser : null);
 
   document.getElementById('btn-landing-account').addEventListener('click', openModal);
+  document.getElementById('btn-footer-account').addEventListener('click', openModal);
   document.getElementById('btn-landing-account-close').addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
