@@ -498,7 +498,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     </div>
 
     <div id="account-logged-out">
-      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yaptın. Hesabın ile ilgili güncellemeri buradan yapabilirsin (Şifre veya Hesap Veri Silme).</p>
+      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yapmadın — ilerlemen sadece bu cihazda saklanır. Hesap oluşturmak veya giriş yapmak için ana sayfaya dön.</p>
       <a id="btn-account-go-landing" class="save-btn" href="index.html" style="width:100%;display:block;text-align:center;box-sizing:border-box;text-decoration:none;color:var(--amber);border-color:var(--amber-dim);" data-i18n="accountGoLanding">Ana Sayfaya Dön</a>
     </div>
 
@@ -813,7 +813,7 @@ const TRANSLATIONS = {
     accountPasswordsNoMatch: 'Şifreler eşleşmiyor.',
     accountAgeTooLow: 'Kayıt için en az 13 yaşında olman gerekiyor.',
     accountCompanyLabel: 'Şirket',
-    accountNoteGuestSimple: 'Giriş yaptın. Hesabın ile ilgili güncellemeri buradan yapabilirsin (Şifre veya Hesap Veri Silme)',
+    accountNoteGuestSimple: 'Giriş yapmadın — ilerlemen sadece bu cihazda saklanır. Hesap oluşturmak veya giriş yapmak için ana sayfaya dön.',
     accountGoLanding: 'Ana Sayfaya Dön',
     accountForgotPassword: 'Şifremi unuttum',
     accountForgotPasswordNeedsEmail: 'Önce e-posta alanına adresini yaz.',
@@ -1073,6 +1073,7 @@ const Tech = {
     UI.refreshTechPanel();
     UI.buildShop();
     UI.refreshOrders();
+    SaveSystem.scheduleSave();
   },
   maxActiveOrders() {
     return CONFIG.maxActiveOrders + (Tech.isUnlocked('extra_order_slot') ? 1 : 0);
@@ -1189,6 +1190,7 @@ const Sites = {
     State.sites.push(site);
     Sites.switchTo(site.id);
     UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+    SaveSystem.scheduleSave();
   },
   expandCost(site) {
     return Math.round(CONFIG.expandCostBase * Math.pow(CONFIG.expandCostGrowth, site.expandCount));
@@ -1208,6 +1210,7 @@ const Sites = {
     site.expandCount += 1;
     UI.toast(`${Lang.t('toastSiteExpanded')}: ${site.cols}×${site.rows}`);
     UI.refreshSitePanel();
+    SaveSystem.scheduleSave();
   },
 };
 
@@ -1238,6 +1241,7 @@ const Economy = {
     if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
     Economy.spend(cost); Economy.addSteel(qty);
     UI.toast(`+${qty} ${Lang.t('toastSteelBought')}`);
+    SaveSystem.scheduleSave();
   },
   takeSteelFromPool(n) {
     if (State.steel < n) return false;
@@ -1253,6 +1257,7 @@ const Economy = {
     Economy.earn(total);
     UI.toast(`${qty}x ${Lang.field(CONFIG.parts[partType], 'name')} ${Lang.t('toastBulkSold')}: +$${Lang.money(total)}`);
     UI.refreshInventory();
+    SaveSystem.scheduleSave();
   },
 };
 
@@ -1346,6 +1351,7 @@ const Factory = {
     site.grid[row][col] = b;
     site.buildings.push(b);
     UI.toast(`${Lang.field(def, 'name')} ${Lang.t('toastPlaced')}`);
+    SaveSystem.scheduleSave();
     return true;
   },
   remove(b, site = Sites.current()) {
@@ -1359,6 +1365,7 @@ const Factory = {
     Factory.remove(b);
     UI.toast(`${Lang.t('toastSold')}: +$${refund}`);
     UI.refreshInspector();
+    SaveSystem.scheduleSave();
   },
   upgrade(b) {
     if (b.kind !== 'machine' || !b.canUpgrade()) return;
@@ -1368,10 +1375,12 @@ const Factory = {
     b.level += 1;
     UI.toast(Lang.t('toastLevelUp', { name: Lang.field(b.def, 'name'), level: b.level }));
     UI.refreshInspector();
+    SaveSystem.scheduleSave();
   },
   rotate(b) {
     if (b.kind !== 'belt') return;
     b.rotate();
+    SaveSystem.scheduleSave();
   },
   repair(b) {
     if (b.kind !== 'machine' || b.wear <= 0) return;
@@ -1382,6 +1391,7 @@ const Factory = {
     b.broken = false;
     UI.toast(`${Lang.field(b.def, 'name')} ${Lang.t('toastRepaired')}`);
     UI.refreshInspector();
+    SaveSystem.scheduleSave();
   },
   startMove(b) {
     State.buildSelection = null;
@@ -1401,6 +1411,7 @@ const Factory = {
     document.getElementById('floor').classList.remove('moving');
     UI.toast(`${Lang.field(b.def, 'name')} ${Lang.t('toastMoved')}`);
     UI.refreshInspector();
+    SaveSystem.scheduleSave();
   },
 };
 
@@ -1562,6 +1573,7 @@ const Orders = {
     State.orders = State.orders.filter(o => o.id !== order.id);
     UI.toast(`${Lang.t('toastOrderDone')}: +$${order.reward}`);
     UI.refreshOrders();
+    if (!Game.offlineCatchupActive) SaveSystem.scheduleSave();
   },
   tick(now) {
     const before = State.orders.length;
@@ -2115,6 +2127,18 @@ const Input = {
    ================================================================ */
 const SaveSystem = {
   KEY: 'cnc-factory-save-v3',
+  _scheduleTimer: null,
+  // Called right after any meaningful game action (placing/selling a
+  // building, research, buying steel, etc.) so changes reach the cloud
+  // within a couple seconds instead of waiting for the next periodic
+  // autosave — periodic-only saving left a real gap where quitting or
+  // refreshing shortly after building something lost that progress,
+  // because the cloud write on page unload isn't reliable (the browser
+  // can cut off in-flight network requests before they finish).
+  scheduleSave() {
+    clearTimeout(SaveSystem._scheduleTimer);
+    SaveSystem._scheduleTimer = setTimeout(() => SaveSystem.save(true), 2000);
+  },
   // Wipes the on-device save. Used after account deletion — without this,
   // a brand-new account created on the same device would "adopt" the old
   // account's leftover local save the moment it signs in (see load()'s
@@ -2189,10 +2213,12 @@ const SaveSystem = {
       }
       // Local save always happens first (works offline, instant); if the
       // player is signed in we additionally push the same data to their
-      // cloud save so it's there for other devices. Cloud failures (e.g.
-      // no network) don't affect the local save's success.
+      // cloud save so it's there for other devices. This is awaited (not
+      // fire-and-forget) so callers that need the save to be truly done
+      // before moving on — like logging out — can rely on it actually
+      // having reached the cloud first.
       if (typeof Auth !== 'undefined' && Auth.currentUser) {
-        Auth.saveCloud(SaveSystem.buildSaveObject()).catch((err) => console.warn('cloud save failed', err));
+        await Auth.saveCloud(SaveSystem.buildSaveObject()).catch((err) => console.warn('cloud save failed', err));
       }
       if (!silent) UI.toast(Lang.t('toastSaved'));
     } catch (err) {
@@ -2360,6 +2386,7 @@ const UI = {
       if (e.target.id === 'account-modal') UI.toggleModal('account-modal', false);
     });
     document.getElementById('btn-account-logout').addEventListener('click', async () => {
+      await SaveSystem.save(true); // make sure the latest progress actually reaches the cloud before we navigate away
       await Auth.logout();
       window.location.href = 'index.html';
     });
