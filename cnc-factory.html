@@ -498,7 +498,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     </div>
 
     <div id="account-logged-out">
-      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yaptın. Hesabın ile ilgili güncellemeleri buradan yapabilirsin (Şifre değiştirme ve Hesap veri işlemleri).</p>
+      <p class="account-note" data-i18n="accountNoteGuestSimple">Giriş yapmadın — ilerlemen sadece bu cihazda saklanır. Hesap oluşturmak veya giriş yapmak için ana sayfaya dön.</p>
       <a id="btn-account-go-landing" class="save-btn" href="index.html" style="width:100%;display:block;text-align:center;box-sizing:border-box;text-decoration:none;color:var(--amber);border-color:var(--amber-dim);" data-i18n="accountGoLanding">Ana Sayfaya Dön</a>
     </div>
 
@@ -813,7 +813,7 @@ const TRANSLATIONS = {
     accountPasswordsNoMatch: 'Şifreler eşleşmiyor.',
     accountAgeTooLow: 'Kayıt için en az 13 yaşında olman gerekiyor.',
     accountCompanyLabel: 'Şirket',
-    accountNoteGuestSimple: 'Giriş yaptın. Hesabın ile ilgili güncellemeleri buradan yapabilirsin (Şifre değiştirme ve Hesap veri işlemleri).',
+    accountNoteGuestSimple: 'Giriş yapmadın — ilerlemen sadece bu cihazda saklanır. Hesap oluşturmak veya giriş yapmak için ana sayfaya dön.',
     accountGoLanding: 'Ana Sayfaya Dön',
     accountForgotPassword: 'Şifremi unuttum',
     accountForgotPasswordNeedsEmail: 'Önce e-posta alanına adresini yaz.',
@@ -2288,10 +2288,15 @@ const SaveSystem = {
   },
   async load() {
     try {
-      // If a session is already known (persisted from a previous visit),
-      // the cloud save is the source of truth — it's what makes progress
-      // follow the player across devices. Otherwise fall back to
-      // whatever's on this device.
+      // Logged-in players always use the cloud save as the ONLY source of
+      // truth — this is what makes progress follow the account across
+      // devices. We deliberately do NOT fall back to whatever happens to
+      // be sitting in this device's local storage when the cloud is empty:
+      // doing so used to let each device silently overwrite the shared
+      // cloud save with its own stale local leftovers, which is exactly
+      // what caused different devices to show different progress under
+      // the same account. If the cloud has nothing yet, the account
+      // simply starts a genuinely fresh game — never adopts local data.
       if (typeof Auth !== 'undefined') {
         const user = await Auth.waitForReady();
         if (user) {
@@ -2299,22 +2304,12 @@ const SaveSystem = {
           if (cloudData) {
             const { ok, previousLastSeenMs } = SaveSystem.applyData(cloudData);
             if (ok) { UI.toast(Lang.t('toastLoaded')); return { loaded: true, previousLastSeenMs }; }
-          } else {
-            // Signed in, but no cloud save yet — adopt whatever's on this
-            // device (if anything) and push it up so this account now owns it.
-            const raw = await SaveSystem.loadLocalRaw();
-            if (raw) {
-              const { ok, previousLastSeenMs } = SaveSystem.applyData(JSON.parse(raw));
-              if (ok) {
-                SaveSystem.save(true);
-                return { loaded: true, previousLastSeenMs };
-              }
-            }
-            return { loaded: false, previousLastSeenMs: null };
           }
+          return { loaded: false, previousLastSeenMs: null }; // signed in, nothing in the cloud yet — fresh start
         }
       }
 
+      // Not signed in: local-only (guest) save.
       const raw = await SaveSystem.loadLocalRaw();
       if (!raw) return { loaded: false, previousLastSeenMs: null };
       const data = JSON.parse(raw);
@@ -3116,16 +3111,17 @@ const Game = {
       Auth.onChange((user) => {
         UI.refreshAccountUI();
         if (Game.gameHasStarted && user) {
-          // A login happened mid-session (via the account modal) — pull
-          // their cloud save now, or adopt this device's current progress
-          // into the account if they don't have one yet.
+          // A login happened mid-session — pull their cloud save. If they
+          // don't have one yet, reload so the normal fresh-start flow in
+          // Game.start() runs, rather than pushing this device's current
+          // (possibly unrelated) local state up as if it were theirs.
           Auth.loadCloud().then((data) => {
             if (data) {
               SaveSystem.applyData(data);
               UI.refreshAll();
               UI.toast(Lang.t('toastLoaded'));
             } else {
-              SaveSystem.save(true);
+              location.reload();
             }
           }).catch((err) => console.warn('post-login cloud pull failed', err));
         }
