@@ -2180,11 +2180,15 @@ const SaveSystem = {
       sites: State.sites.map(site => ({
         id: site.id, name: site.name, cols: site.cols, rows: site.rows, expandCount: site.expandCount,
         buildings: site.buildings.map(b => ({
+          // null, not undefined — Firestore's .set() throws on documents
+          // containing undefined fields, which was silently breaking every
+          // cloud save that included a non-machine or non-belt building
+          // (depot/warehouse/technician always had 3-4 undefined fields).
           defId: b.defId, row: b.row, col: b.col,
-          level: b.kind === 'machine' ? b.level : undefined,
-          wear: b.kind === 'machine' ? b.wear : undefined,
-          broken: b.kind === 'machine' ? b.broken : undefined,
-          dir: b.kind === 'belt' ? b.dir : undefined,
+          level: b.kind === 'machine' ? b.level : null,
+          wear: b.kind === 'machine' ? b.wear : null,
+          broken: b.kind === 'machine' ? b.broken : null,
+          dir: b.kind === 'belt' ? b.dir : null,
         })),
       })),
       orders: [], // orders intentionally not persisted (time-based, would feel stale)

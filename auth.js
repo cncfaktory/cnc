@@ -19,6 +19,11 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+// Safety net: without this, Firestore's .set()/.add() throw on any document
+// containing an `undefined` field anywhere (even nested), silently failing
+// the whole write. Better to drop the odd stray undefined field than to
+// lose an entire save because of one.
+firebase.firestore().settings({ ignoreUndefinedProperties: true });
 
 const Auth = {
   currentUser: null,
@@ -49,18 +54,31 @@ const Auth = {
     });
   },
 
-  friendlyError(err) {
-    const map = {
-      'auth/invalid-email': 'Geçersiz e-posta adresi.',
-      'auth/email-already-in-use': 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.',
-      'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
-      'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
-      'auth/wrong-password': 'Şifre yanlış.',
-      'auth/invalid-credential': 'E-posta veya şifre yanlış.',
-      'auth/too-many-requests': 'Çok fazla başarısız deneme. Birazdan tekrar dene.',
-      'auth/requires-recent-login': 'Bu işlem için güvenlik nedeniyle tekrar giriş yapman gerekiyor.',
+  friendlyError(err, lang) {
+    const maps = {
+      tr: {
+        'auth/invalid-email': 'Geçersiz e-posta adresi.',
+        'auth/email-already-in-use': 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.',
+        'auth/weak-password': 'Şifre en az 6 karakter olmalı.',
+        'auth/user-not-found': 'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
+        'auth/wrong-password': 'Şifre yanlış.',
+        'auth/invalid-credential': 'E-posta veya şifre yanlış.',
+        'auth/too-many-requests': 'Çok fazla başarısız deneme. Birazdan tekrar dene.',
+        'auth/requires-recent-login': 'Bu işlem için güvenlik nedeniyle tekrar giriş yapman gerekiyor.',
+      },
+      en: {
+        'auth/invalid-email': 'Invalid email address.',
+        'auth/email-already-in-use': 'An account with this email already exists. Try logging in instead.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/invalid-credential': 'Incorrect email or password.',
+        'auth/too-many-requests': 'Too many failed attempts. Please try again shortly.',
+        'auth/requires-recent-login': 'For security, you need to sign in again to do this.',
+      },
     };
-    return map[err.code] || (err.message || 'Bilinmeyen bir hata oluştu.');
+    const map = maps[lang === 'en' ? 'en' : 'tr'];
+    return map[err.code] || (err.message || (lang === 'en' ? 'An unknown error occurred.' : 'Bilinmeyen bir hata oluştu.'));
   },
 
   // profile is optional: { fullName, region, age, companyName }. Stored in
