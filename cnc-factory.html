@@ -126,6 +126,16 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
   overflow-y:auto;
 }
 .side-section{border-bottom:1px solid var(--line-soft);padding:14px 16px;}
+
+/* Mobile bottom tab bar + slide-up sheets — hidden on desktop by default,
+   activated inside the mobile media query below. */
+#mobile-tabbar{display:none;}
+#mobile-sheet-backdrop{display:none;}
+/* On desktop these buttons should lay out exactly as if they were direct
+   topbar children — display:contents makes the wrapper invisible to layout
+   while still letting mobile CSS target it as a real collapsible block. */
+#topbar-secondary{display:contents;}
+#btn-topbar-more{display:none;}
 .side-section h2{
   font-family:var(--font-display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--text-dim);margin:0 0 10px 0;font-weight:600;
@@ -328,11 +338,8 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
   .quick-buy-btn{padding:6px 7px;font-size:10px;}
 
   #main{flex-direction:column;}
-  #floor-wrap{flex:none;height:46vh;min-height:260px;}
-  #sidebar{
-    width:100%;border-left:none;border-top:1px solid var(--line);
-    flex:1;min-height:0;
-  }
+  #floor-wrap{flex:none;height:calc(100vh - 210px);min-height:280px;}
+  #sidebar{display:none;} /* content now lives in the slide-up sheets below, opened via the tab bar */
   #site-tabs{top:8px;left:8px;}
   .site-tab{padding:8px 10px;font-size:12px;}
   #view-controls{bottom:8px;right:8px;}
@@ -345,8 +352,53 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
   /* Larger tap targets throughout — mouse-hover states don't apply on touch,
      so buttons need to be comfortably sized instead. */
   .shop-item{padding:10px 12px;}
-  .order-card button, .insp-actions button, .tech-card button{padding:10px 4px;font-size:12px;}
+  .order-card button, .insp-actions button, .tech-card button{padding:12px 4px;font-size:13px;}
   .bulk-sell-btn{padding:7px 10px;}
+
+  /* Bottom tab bar */
+  #mobile-tabbar{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:150;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  #mobile-tabbar .mtab{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    background:none;border:none;color:var(--text-dim);font-family:var(--font-mono);
+    font-size:9.5px;padding:6px 2px;position:relative;border-radius:6px;
+  }
+  #mobile-tabbar .mtab.active{color:var(--amber);background:rgba(240,160,48,0.1);}
+  #mobile-tabbar .tab-icon{font-size:19px;line-height:1;}
+  #mobile-tabbar .tab-badge{
+    position:absolute;top:2px;right:22%;min-width:15px;height:15px;border-radius:8px;
+    background:var(--red);color:#fff;font-size:9px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+  #mobile-tabbar .tab-badge.hidden{display:none;}
+
+  /* Slide-up backdrop */
+  #mobile-sheet-backdrop{
+    display:block;position:fixed;inset:0;background:rgba(8,10,12,0.55);z-index:140;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #mobile-sheet-backdrop.show{opacity:1;pointer-events:auto;}
+
+  /* Each sidebar section becomes an independent slide-up sheet, positioned
+     fixed above the tab bar and translated fully off-screen until opened. */
+  .side-section{
+    position:fixed;left:0;right:0;bottom:0;z-index:145;
+    background:var(--panel);border:1px solid var(--line);border-bottom:none;
+    border-radius:16px 16px 0 0;
+    max-height:66vh;overflow-y:auto;
+    padding:20px 18px calc(72px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(110%);
+    transition:transform .25s cubic-bezier(.2,.8,.3,1);
+    box-shadow:0 -10px 34px rgba(0,0,0,0.45);
+  }
+  .side-section.sheet-open{transform:translateY(0);}
+  .side-section::before{
+    content:'';position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:38px;height:4px;border-radius:2px;background:var(--line);
+  }
 }
 @media (max-width: 480px){
   #topbar{gap:6px 8px;}
@@ -378,11 +430,14 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     <div class="stat"><span class="label" data-i18n="labelClock">Saat</span><span class="value" id="stat-clock">00:00</span></div>
     <div class="stat"><span class="label" data-i18n="labelShift">Vardiya</span><span class="value" id="stat-shift">☀️ Gündüz</span></div>
     <div class="spacer"></div>
-    <button class="save-btn" id="btn-account">👤 <span id="btn-account-label" data-i18n="accountGuest">Hesap</span></button>
-    <button class="save-btn" id="btn-lang">🌐 EN</button>
-    <button class="save-btn" id="btn-stats">📊 <span data-i18n="btnStats">İstatistik</span></button>
-    <button class="save-btn" id="btn-tech">🔬 <span data-i18n="btnTech">Ar-Ge</span></button>
-    <button class="save-btn" id="btn-save">💾 <span data-i18n="btnSave">Kaydet</span></button>
+    <button class="save-btn" id="btn-topbar-more">⋮</button>
+    <div id="topbar-secondary">
+      <button class="save-btn" id="btn-account">👤 <span id="btn-account-label" data-i18n="accountGuest">Hesap</span></button>
+      <button class="save-btn" id="btn-lang">🌐 EN</button>
+      <button class="save-btn" id="btn-stats">📊 <span data-i18n="btnStats">İstatistik</span></button>
+      <button class="save-btn" id="btn-tech">🔬 <span data-i18n="btnTech">Ar-Ge</span></button>
+      <button class="save-btn" id="btn-save">💾 <span data-i18n="btnSave">Kaydet</span></button>
+    </div>
   </div>
 
   <div id="build-modal" class="modal-backdrop hidden">
@@ -419,13 +474,13 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
     </div>
 
     <div id="sidebar">
-      <div class="side-section">
+      <div class="side-section" id="site-section">
         <h2><span data-i18n="sectionSite">Saha</span> <span class="tag" id="site-size-tag"></span></h2>
         <div id="site-info" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;"></div>
         <button id="btn-expand" class="save-btn" style="width:100%;color:var(--amber);border-color:var(--amber-dim);" data-i18n="expandSite">Sahayı Genişlet</button>
       </div>
 
-      <div class="side-section">
+      <div class="side-section" id="quota-section">
         <h2><span data-i18n="sectionQuota">Günlük Hedef</span> <span class="tag" id="quota-tag"></span></h2>
         <div class="insp-wear" style="margin-bottom:12px;"><div class="fill" id="quota-fill"></div></div>
         <div class="inv-row"><span data-i18n="reputation">İtibar</span><span class="qty" id="reputation-value"></span></div>
@@ -433,7 +488,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
         <div id="prestige-note" style="font-size:10px;color:var(--text-dim);line-height:1.5;"></div>
       </div>
 
-      <div class="side-section" style="flex-shrink:0;">
+      <div class="side-section" id="orders-section" style="flex-shrink:0;">
         <h2><span data-i18n="sectionOrders">Siparişler</span> <span class="tag" id="orders-tag"></span></h2>
         <div id="orders-list"></div>
       </div>
@@ -443,6 +498,14 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
         <div id="inspector"><div class="none" data-i18n="noneSelected">Bir binaya tıkla</div></div>
       </div>
     </div>
+  </div>
+
+  <div id="mobile-sheet-backdrop"></div>
+  <div id="mobile-tabbar">
+    <button class="mtab" data-target="site-section"><span class="tab-icon">🏭</span><span data-i18n="tabSite">Saha</span></button>
+    <button class="mtab" data-target="quota-section"><span class="tab-icon">🎯</span><span data-i18n="tabQuota">Hedef</span></button>
+    <button class="mtab" data-target="orders-section"><span class="tab-icon">📦</span><span class="tab-badge hidden" id="mtab-orders-badge">0</span><span data-i18n="tabOrders">Siparişler</span></button>
+    <button class="mtab" data-target="inspector-section"><span class="tab-icon">🔧</span><span data-i18n="tabSelected">Bina</span></button>
   </div>
 </div>
 
@@ -825,6 +888,7 @@ const TRANSLATIONS = {
     accountPasswordChanged: 'Şifren güncellendi.',
     accountFillAllPasswordFields: 'Her iki şifre alanı da gerekli.',
     accountCancel: 'Vazgeç',
+    tabSite: 'Saha', tabQuota: 'Hedef', tabOrders: 'Siparişler', tabSelected: 'Bina',
   },
   en: {
     appTitle: 'CNC FACTORY', appSubtitle: 'v0.1 — management simulation',
@@ -931,6 +995,7 @@ const TRANSLATIONS = {
     accountPasswordChanged: 'Your password has been updated.',
     accountFillAllPasswordFields: 'Both password fields are required.',
     accountCancel: 'Cancel',
+    tabSite: 'Site', tabQuota: 'Target', tabOrders: 'Orders', tabSelected: 'Building',
   },
 };
 
@@ -2082,6 +2147,7 @@ const Input = {
     } else if (existing) {
       State.selectedBuilding = existing;
       UI.refreshInspector();
+      if (window.innerWidth <= 860) UI.openMobileSheet('inspector-section');
     } else {
       State.selectedBuilding = null;
       UI.refreshInspector();
@@ -2338,6 +2404,7 @@ const UI = {
     UI.applyStaticText();
     document.getElementById('btn-lang').addEventListener('click', () => Lang.toggle());
     document.getElementById('btn-save').addEventListener('click', () => SaveSystem.save(false));
+    UI.initMobileTabs();
     document.querySelectorAll('[data-buy]').forEach(btn => {
       btn.addEventListener('click', () => {
         const qty = parseInt(btn.dataset.buy, 10);
@@ -2536,6 +2603,43 @@ const UI = {
   },
   toggleModal(id, show) {
     document.getElementById(id).classList.toggle('hidden', !show);
+  },
+  // Mobile bottom-sheet tab bar: each sidebar section (Saha/Günlük Hedef/
+  // Siparişler/Seçili Bina) is a fixed panel that slides up from behind the
+  // tab bar when its icon is tapped, and slides back down when tapped
+  // again, when the backdrop is tapped, or when another sheet is opened.
+  initMobileTabs() {
+    const backdrop = document.getElementById('mobile-sheet-backdrop');
+    document.querySelectorAll('#mobile-tabbar .mtab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.dataset.target;
+        const alreadyOpen = document.getElementById(targetId).classList.contains('sheet-open');
+        UI.closeMobileSheets();
+        if (!alreadyOpen) UI.openMobileSheet(targetId);
+      });
+    });
+    backdrop.addEventListener('click', () => UI.closeMobileSheets());
+  },
+  openMobileSheet(sectionId) {
+    UI.closeMobileSheets();
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    section.classList.add('sheet-open');
+    document.getElementById('mobile-sheet-backdrop').classList.add('show');
+    const tab = document.querySelector(`#mobile-tabbar .mtab[data-target="${sectionId}"]`);
+    if (tab) tab.classList.add('active');
+  },
+  closeMobileSheets() {
+    document.querySelectorAll('.side-section.sheet-open').forEach(el => el.classList.remove('sheet-open'));
+    document.querySelectorAll('#mobile-tabbar .mtab.active').forEach(el => el.classList.remove('active'));
+    document.getElementById('mobile-sheet-backdrop').classList.remove('show');
+  },
+  refreshOrdersBadge() {
+    const badge = document.getElementById('mtab-orders-badge');
+    if (!badge) return;
+    const count = State.orders.length;
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
   },
   showOfflineOverlay() { UI.toggleModal('offline-overlay', true); },
   hideOfflineOverlay() { UI.toggleModal('offline-overlay', false); },
@@ -2858,6 +2962,7 @@ const UI = {
     }).join('');
   },
   refreshOrders() {
+    UI.refreshOrdersBadge();
     document.getElementById('orders-tag').textContent = `${State.orders.length}/${Tech.maxActiveOrders()} ${Lang.t('ordersActive')}`;
     const list = document.getElementById('orders-list');
     if (State.orders.length === 0) {
