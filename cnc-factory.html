@@ -339,7 +339,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 
   #main{flex-direction:column;}
   #floor-wrap{flex:none;height:calc(100vh - 210px);min-height:280px;}
-  #sidebar{display:none;} /* content now lives in the slide-up sheets below, opened via the tab bar */
+  #sidebar{width:auto;border-left:none;} /* children are position:fixed slide-up sheets now, so this itself renders empty — just don't let it claim layout width/border */
   #site-tabs{top:8px;left:8px;}
   .site-tab{padding:8px 10px;font-size:12px;}
   #view-controls{bottom:8px;right:8px;}
