@@ -769,6 +769,26 @@ const CONFIG = {
       cost: 16000, desc: 'Aynı anda bir sipariş daha kabul edebilirsin (+1 aktif sipariş).',
       desc_en: 'You can accept one more order at a time (+1 active order slot).',
     },
+    {
+      id: 'order_speed_1', name: 'Hızlı Sipariş Hattı', name_en: 'Rapid Order Pipeline', tier: 4, requires: ['extra_order_slot'],
+      cost: 250000, desc: 'Yeni siparişler %25 daha sık gelir.',
+      desc_en: 'New orders arrive 25% more often.',
+    },
+    {
+      id: 'order_qty_1', name: 'Büyük Hacimli Anlaşmalar', name_en: 'High-Volume Contracts', tier: 4, requires: ['extra_order_slot'],
+      cost: 500000, desc: 'Sipariş miktarları %50 daha fazla olur.',
+      desc_en: 'Order quantities are 50% larger.',
+    },
+    {
+      id: 'order_speed_2', name: 'Küresel Sipariş Ağı', name_en: 'Global Order Network', tier: 5, requires: ['order_speed_1'],
+      cost: 500000, desc: 'Yeni siparişler %50 daha sık gelir (toplamda).',
+      desc_en: 'New orders arrive 50% more often (total effect).',
+    },
+    {
+      id: 'order_qty_2', name: 'Endüstriyel Ölçek Anlaşmalar', name_en: 'Industrial-Scale Contracts', tier: 5, requires: ['order_qty_1'],
+      cost: 1000000, desc: 'Sipariş miktarları %100 daha fazla olur (toplamda).',
+      desc_en: 'Order quantities are 100% larger (total effect).',
+    },
   ],
 
   clients: ['Nordyne A.Ş.', 'Volkan Otomotiv', 'Baltık Makine', 'Ege Endüstri', 'Kaya Metal', 'Trans-Fab'],
@@ -1145,6 +1165,21 @@ const Tech = {
   },
   beltMs() {
     return Tech.isUnlocked('fast_belts') ? CONFIG.beltMs * 0.75 : CONFIG.beltMs;
+  },
+  // How much to shrink the wait-time between new orders by. Tier 2 is the
+  // total effect once bought (not stacked on top of tier 1) — buying both
+  // just means you've paid for the bigger of the two.
+  orderIntervalFactor() {
+    if (Tech.isUnlocked('order_speed_2')) return 0.5;  // 50% faster
+    if (Tech.isUnlocked('order_speed_1')) return 0.75; // 25% faster
+    return 1;
+  },
+  // How much to scale rolled order quantities up by. Same "total effect,
+  // not stacked" rule as orderIntervalFactor above.
+  orderQtyFactor() {
+    if (Tech.isUnlocked('order_qty_2')) return 2.0;  // +100%
+    if (Tech.isUnlocked('order_qty_1')) return 1.5;  // +50%
+    return 1;
   },
 };
 
@@ -1613,7 +1648,7 @@ const Orders = {
     if (State.orders.length >= Tech.maxActiveOrders()) return;
     const partKeys = Object.keys(CONFIG.parts);
     const partType = partKeys[Math.floor(Math.random() * partKeys.length)];
-    const qty = 3 + Math.floor(Math.random() * 6);
+    const qty = Math.round((3 + Math.floor(Math.random() * 6)) * Tech.orderQtyFactor());
     const base = CONFIG.parts[partType].basePrice;
     const repMultiplier = 0.6 + (State.reputation / 100) * 0.8; // 0.6x at 0 rep, 1.4x at 100 rep
     const reward = Math.round(qty * base * (1.4 + Math.random() * 0.6) * repMultiplier);
@@ -1654,7 +1689,9 @@ const Orders = {
         if ((State.inventory[o.partType] || 0) >= o.qty) Orders.fulfill(o);
       }
     }
-    if (now - State.lastOrderSpawn > randRange(...CONFIG.orderIntervalMs)) {
+    const [minGap, maxGap] = CONFIG.orderIntervalMs;
+    const factor = Tech.orderIntervalFactor();
+    if (now - State.lastOrderSpawn > randRange(minGap * factor, maxGap * factor)) {
       State.lastOrderSpawn = now;
       Orders.spawn();
     }
