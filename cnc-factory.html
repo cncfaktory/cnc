@@ -87,6 +87,8 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 .quick-buy-btn:hover{border-color:var(--blue);background:#20303c;}
 .quick-buy-btn:disabled{opacity:.4;cursor:not-allowed;}
 .quick-buy-btn:disabled:hover{border-color:var(--line);background:var(--panel-2);}
+.quick-buy-max{color:var(--amber);border-color:var(--amber-dim);}
+.quick-buy-max:hover{border-color:var(--amber);background:#2b2620;}
 
 #main{flex:1;display:flex;min-height:0;}
 
@@ -424,6 +426,7 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
         <button class="quick-buy-btn" data-buy="10">+10<small></small></button>
         <button class="quick-buy-btn" data-buy="50">+50<small></small></button>
         <button class="quick-buy-btn" data-buy="200">+200<small></small></button>
+        <button class="quick-buy-btn quick-buy-max" id="btn-buy-max">MAX<small></small></button>
       </div>
     </div>
     <div class="stat"><span class="label" data-i18n="labelDay">Gün</span><span class="value" id="stat-day">1</span></div>
@@ -2448,6 +2451,11 @@ const UI = {
         Economy.buySteel(qty, qty * CONFIG.steelUnitCost);
       });
     });
+    document.getElementById('btn-buy-max').addEventListener('click', () => {
+      const qty = Math.floor(State.money / CONFIG.steelUnitCost);
+      if (qty <= 0) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+      Economy.buySteel(qty, qty * CONFIG.steelUnitCost);
+    });
     UI.refreshQuickBuy();
     // Delegated listener: survives frequent re-renders of #orders-list,
     // unlike per-button listeners which get destroyed/recreated on rebuild.
@@ -2637,6 +2645,10 @@ const UI = {
       btn.querySelector('small').textContent = '$' + Lang.money(cost);
       btn.disabled = !Economy.canAfford(cost);
     });
+    const maxBtn = document.getElementById('btn-buy-max');
+    const maxQty = Math.floor(State.money / CONFIG.steelUnitCost);
+    maxBtn.querySelector('small').textContent = maxQty > 0 ? `+${maxQty}` : '$0';
+    maxBtn.disabled = maxQty <= 0;
   },
   toggleModal(id, show) {
     document.getElementById(id).classList.toggle('hidden', !show);
