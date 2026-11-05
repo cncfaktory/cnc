@@ -111,6 +111,8 @@ html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
 }
 .site-tab:hover{border-color:var(--steel);}
 .site-tab.active{border-color:var(--amber);color:var(--amber);background:rgba(43,38,32,0.92);}
+.site-tab.auto-parts-tab{color:var(--amber);border-color:var(--amber-dim);border-style:solid;}
+.site-tab.auto-parts-tab:disabled{opacity:.4;}
 .site-tab.add{color:var(--green);border-style:dashed;}
 .site-tab.add:disabled{opacity:.4;cursor:not-allowed;}
 
@@ -601,6 +603,36 @@ const CONFIG = {
   expandCostGrowth: 1.55,
   newSiteCostBase: 2600,
   newSiteCostGrowth: 1.7,
+
+  // Auto Parts Station: a one-time-purchase, pre-built second facility —
+  // unlike a regular new site (empty grid you build up yourself), this
+  // arrives fully wired and producing from the moment you buy it. Layout
+  // coordinates are [row, col]; belts/machines/depot/warehouse are all
+  // ordinary Building instances, so every existing system (wear, repair,
+  // upgrades, belt jams, tech multipliers) applies to it automatically.
+  autoPartsStationCost: 250000000,
+  autoPartsStationGrid: { cols: 10, rows: 7 },
+  autoPartsStationLayout: [
+    { defId: 'depot',       row: 2, col: 0 },
+    { defId: 'belt',        row: 2, col: 1, dir: 'right' },
+    { defId: 'belt',        row: 2, col: 2, dir: 'right' },
+    { defId: 'pistonPress', row: 2, col: 3 },
+    { defId: 'belt',        row: 2, col: 4, dir: 'right' },
+    { defId: 'belt',        row: 2, col: 5, dir: 'right' },
+    { defId: 'warehouse',   row: 2, col: 6 },
+
+    { defId: 'depot',       row: 4, col: 0 },
+    { defId: 'belt',        row: 4, col: 1, dir: 'right' },
+    { defId: 'belt',        row: 4, col: 2, dir: 'right' },
+    { defId: 'brakePress',  row: 4, col: 3 },
+    { defId: 'belt',        row: 4, col: 4, dir: 'right' },
+    { defId: 'belt',        row: 4, col: 5, dir: 'right' },
+    { defId: 'warehouse',   row: 4, col: 6 },
+
+    // Keeps both presses repaired so the pre-built line can run on its own
+    { defId: 'technician', row: 3, col: 3 },
+  ],
+
   statsSampleMs: 5000,   // how often we snapshot the production rate
   statsMaxSamples: 40,   // rolling window shown in the chart (~3.3 minutes)
 
@@ -673,6 +705,8 @@ const CONFIG = {
     shaft:   { name: 'Mil',    name_en: 'Shaft',   color: '#4fbf82', basePrice: 30 },
     gear:    { name: 'Dişli',  name_en: 'Gear',    color: '#e3b23c', basePrice: 38 },
     housing: { name: 'Gövde',  name_en: 'Housing', color: '#b06fd8', basePrice: 68 },
+    piston:    { name: 'Piston',          name_en: 'Piston',      color: '#e07a3f', basePrice: 210 },
+    brakeDisc: { name: 'Fren Diski',      name_en: 'Brake Disc',  color: '#9c9fa6', basePrice: 290 },
   },
 
   // Every placeable thing on the factory floor lives here, keyed by id.
@@ -737,8 +771,28 @@ const CONFIG = {
       desc: 'Biten parçaları satılabilir hale getirir', desc_en: 'Makes finished parts sellable',
       color: '#c8ccd0', cost: 180, sellRatio: 0.5,
     },
+    // Only appear in the build shop once the Auto Parts Station has been
+    // purchased — but they use the exact same Building/Logistics/upgrade
+    // machinery as every other machine, so wear, repair, belts, and tech
+    // multipliers (fast_belts etc.) all apply automatically.
+    pistonPress: {
+      id: 'pistonPress', kind: 'machine', group: 'Oto Yedek Parça', group_en: 'Auto Parts', requiresAutoPartsStation: true,
+      name: 'Piston Presi', name_en: 'Piston Press',
+      desc: 'Çelik → Piston', desc_en: 'Steel → Piston',
+      color: '#e07a3f', cost: 4200, sellRatio: 0.5,
+      cycleMs: 16000, steelPerCycle: 2, outputPart: 'piston',
+      upgradeCostBase: 2600, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
+    brakePress: {
+      id: 'brakePress', kind: 'machine', group: 'Oto Yedek Parça', group_en: 'Auto Parts', requiresAutoPartsStation: true,
+      name: 'Fren Diski Presi', name_en: 'Brake Disc Press',
+      desc: 'Çelik → Fren Diski', desc_en: 'Steel → Brake Disc',
+      color: '#9c9fa6', cost: 5800, sellRatio: 0.5,
+      cycleMs: 19000, steelPerCycle: 3, outputPart: 'brakeDisc',
+      upgradeCostBase: 3400, upgradeCycleFactor: 0.82, maxLevel: 5,
+    },
   },
-  shopOrder: ['depot', 'belt', 'mill', 'lathe', 'router', 'cnc5axis', 'technician', 'warehouse'],
+  shopOrder: ['depot', 'belt', 'mill', 'lathe', 'router', 'cnc5axis', 'pistonPress', 'brakePress', 'technician', 'warehouse'],
 
   bulkSellRatio: 0.55, // instant bulk-sell price = basePrice * this (below order value, to keep orders worthwhile)
 
@@ -870,6 +924,7 @@ const TRANSLATIONS = {
     havingQty: '(elinde {n})',
     quotaPartsUnit: 'parça', siteInfoBuildings: '— bu sahadaki bina sayısı: {n}',
     siteName: 'Saha', mainSiteName: 'Ana Saha',
+    autoPartsStationName: 'Oto Yedek Parça Fabrikası', buyAutoPartsStation: 'Oto Parça Fabrikası Satın Al',
     toastLevelUp: '{name} seviye {level} oldu.',
     offlineLoadingTitle: 'Fabrika ilerlemeni hesaplıyor…',
     offlineLoadingBody: 'Yokken üretim devam etti, bir saniye sürebilir.',
@@ -977,6 +1032,7 @@ const TRANSLATIONS = {
     havingQty: '(have {n})',
     quotaPartsUnit: 'parts', siteInfoBuildings: '— buildings on this site: {n}',
     siteName: 'Site', mainSiteName: 'Main Site',
+    autoPartsStationName: 'Auto Parts Factory', buyAutoPartsStation: 'Buy Auto Parts Factory',
     toastLevelUp: '{name} is now level {level}.',
     offlineLoadingTitle: 'Calculating your factory\'s progress…',
     offlineLoadingBody: 'Production kept going while you were away, this may take a second.',
@@ -1136,6 +1192,7 @@ const State = {
   moveSelection: null,   // building currently armed for relocation
   nextBuildingId: 1,
   nextSiteId: 1,
+  autoPartsStationPurchased: false,
   nextOrderId: 1,
   lastOrderSpawn: 0,
 };
@@ -1255,12 +1312,11 @@ const Expenses = {
    frame, so factories you're not currently viewing keep producing.
    ================================================================ */
 const Sites = {
-  create(name) {
+  create(name, cols = CONFIG.grid.startCols, rows = CONFIG.grid.startRows) {
     const site = {
       id: State.nextSiteId++,
       name,
-      cols: CONFIG.grid.startCols,
-      rows: CONFIG.grid.startRows,
+      cols, rows,
       grid: [],
       buildings: [],
       camera: { x: 0, y: 0, zoom: 1 },
@@ -1293,6 +1349,34 @@ const Sites = {
     State.sites.push(site);
     Sites.switchTo(site.id);
     UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+    SaveSystem.scheduleSave();
+  },
+  // The Auto Parts Station is a one-time purchase that arrives fully built
+  // and already producing — unlike addNew() above, nothing here is empty.
+  // We place each building directly (bypassing Factory.place's individual
+  // cost-charging, since the $250M price already covers the whole line),
+  // but they're ordinary Building instances afterward, so wear/upgrades/
+  // belt logistics/tech multipliers all apply exactly like anywhere else.
+  buyAutoPartsStation() {
+    if (State.autoPartsStationPurchased) return;
+    const cost = CONFIG.autoPartsStationCost;
+    if (!Economy.canAfford(cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return; }
+    Economy.spend(cost);
+
+    const { cols, rows } = CONFIG.autoPartsStationGrid;
+    const site = Sites.create(Lang.t('autoPartsStationName'), cols, rows);
+    site.kind = 'autoParts';
+    for (const item of CONFIG.autoPartsStationLayout) {
+      const b = Factory.create(item.defId, item.row, item.col);
+      if (b.kind === 'belt' && item.dir) b.dir = item.dir;
+      site.grid[item.row][item.col] = b;
+      site.buildings.push(b);
+    }
+    State.sites.push(site);
+    State.autoPartsStationPurchased = true;
+    Sites.switchTo(site.id);
+    UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+    UI.buildShop(); // pistonPress/brakePress are now unlocked in the build shop too
     SaveSystem.scheduleSave();
   },
   expandCost(site) {
@@ -2282,9 +2366,10 @@ const SaveSystem = {
       },
       currentSiteId: State.currentSiteId,
       unlockedTech: State.unlockedTech,
+      autoPartsStationPurchased: State.autoPartsStationPurchased,
       lang: Lang.current,
       sites: State.sites.map(site => ({
-        id: site.id, name: site.name, cols: site.cols, rows: site.rows, expandCount: site.expandCount,
+        id: site.id, name: site.name, kind: site.kind || null, cols: site.cols, rows: site.rows, expandCount: site.expandCount,
         buildings: site.buildings.map(b => ({
           // null, not undefined — Firestore's .set() throws on documents
           // containing undefined fields, which was silently breaking every
@@ -2364,9 +2449,11 @@ const SaveSystem = {
     for (const sd of (data.sites || [])) {
       const site = {
         id: sd.id, name: sd.name, cols: sd.cols, rows: sd.rows,
+        kind: sd.kind || undefined,
         grid: [], buildings: [], camera: { x: 0, y: 0, zoom: 1 },
         expandCount: sd.expandCount || 0,
       };
+      if (sd.kind) site.kind = sd.kind;
       Sites.initGrid(site);
       for (const bd of (sd.buildings || [])) {
         if (!CONFIG.buildables[bd.defId]) continue; // ignore unknown ids from older saves
@@ -2383,6 +2470,7 @@ const SaveSystem = {
     }
     State.currentSiteId = data.currentSiteId ?? (State.sites[0] && State.sites[0].id);
     State.unlockedTech = Array.isArray(data.unlockedTech) ? data.unlockedTech : [];
+    State.autoPartsStationPurchased = !!data.autoPartsStationPurchased;
     Lang.current = (data.lang === 'en') ? 'en' : 'tr';
     document.documentElement.lang = Lang.current;
     return { ok: State.sites.length > 0, previousLastSeenMs };
@@ -2567,6 +2655,7 @@ const UI = {
       const btn = e.target.closest('button');
       if (!btn) return;
       if (btn.id === 'btn-new-site') { if (!btn.disabled) Sites.addNew(); return; }
+      if (btn.id === 'btn-buy-auto-parts') { if (!btn.disabled) Sites.buyAutoPartsStation(); return; }
       const siteId = btn.dataset.siteId;
       if (siteId) Sites.switchTo(parseInt(siteId, 10));
     });
@@ -2930,9 +3019,15 @@ const UI = {
     const wrap = document.getElementById('site-tabs');
     const cost = Sites.newSiteCost();
     const canAddSite = Economy.canAfford(cost);
-    wrap.innerHTML = State.sites.map(site => `
-      <button class="site-tab ${site.id === State.currentSiteId ? 'active' : ''}" data-site-id="${site.id}">${site.name}</button>
-    `).join('') + `<button class="site-tab add" id="btn-new-site" ${canAddSite ? '' : 'disabled'}>+ ${Lang.t('newSite')} ($${Lang.money(cost)})</button>`;
+    let html = State.sites.map(site => `
+      <button class="site-tab ${site.id === State.currentSiteId ? 'active' : ''}" data-site-id="${site.id}">${site.kind === 'autoParts' ? '🚗 ' : ''}${site.name}</button>
+    `).join('');
+    html += `<button class="site-tab add" id="btn-new-site" ${canAddSite ? '' : 'disabled'}>+ ${Lang.t('newSite')} ($${Lang.money(cost)})</button>`;
+    if (!State.autoPartsStationPurchased) {
+      const canAffordStation = Economy.canAfford(CONFIG.autoPartsStationCost);
+      html += `<button class="site-tab add auto-parts-tab" id="btn-buy-auto-parts" ${canAffordStation ? '' : 'disabled'}>🚗 ${Lang.t('buyAutoPartsStation')} ($${Lang.money(CONFIG.autoPartsStationCost)})</button>`;
+    }
+    wrap.innerHTML = html;
   },
   refreshSitePanel() {
     const site = Sites.current();
@@ -2952,6 +3047,7 @@ const UI = {
     CONFIG.shopOrder.forEach(id => {
       const def = CONFIG.buildables[id];
       if (def.requiresTech && !Tech.isUnlocked(def.requiresTech)) return; // locked behind research
+      if (def.requiresAutoPartsStation && !State.autoPartsStationPurchased) return; // locked behind the station purchase
       const groupLabel = Lang.field(def, 'group');
       if (groupLabel !== lastGroup) {
         lastGroup = groupLabel;
