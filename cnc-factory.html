@@ -630,7 +630,7 @@ const CONFIG = {
     { defId: 'warehouse',   row: 4, col: 6 },
 
     // Keeps both presses repaired so the pre-built line can run on its own
-    { defId: 'technician', row: 3, col: 3 },
+    { defId: 'technician',  row: 3, col: 3 },
   ],
 
   statsSampleMs: 5000,   // how often we snapshot the production rate
@@ -924,7 +924,8 @@ const TRANSLATIONS = {
     havingQty: '(elinde {n})',
     quotaPartsUnit: 'parça', siteInfoBuildings: '— bu sahadaki bina sayısı: {n}',
     siteName: 'Saha', mainSiteName: 'Ana Saha',
-    autoPartsStationName: 'Oto Yedek Parça Fabrikası', buyAutoPartsStation: 'Oto Parça Fabrikası Satın Al',
+    autoPartsStationName: 'Oto Yedek Parça Sahası', buyAutoPartsStation: 'Oto Yedek Parça Sahası Satın Al',
+    toastStationOnly: 'Bu makine sadece Oto Yedek Parça Sahasında kurulabilir.',
     toastLevelUp: '{name} seviye {level} oldu.',
     offlineLoadingTitle: 'Fabrika ilerlemeni hesaplıyor…',
     offlineLoadingBody: 'Yokken üretim devam etti, bir saniye sürebilir.',
@@ -1032,7 +1033,8 @@ const TRANSLATIONS = {
     havingQty: '(have {n})',
     quotaPartsUnit: 'parts', siteInfoBuildings: '— buildings on this site: {n}',
     siteName: 'Site', mainSiteName: 'Main Site',
-    autoPartsStationName: 'Auto Parts Factory', buyAutoPartsStation: 'Buy Auto Parts Factory',
+    autoPartsStationName: 'Auto Parts Site', buyAutoPartsStation: 'Buy Auto Parts Site',
+    toastStationOnly: 'This machine can only be built at the Auto Parts Site.',
     toastLevelUp: '{name} is now level {level}.',
     offlineLoadingTitle: 'Calculating your factory\'s progress…',
     offlineLoadingBody: 'Production kept going while you were away, this may take a second.',
@@ -1095,7 +1097,26 @@ const Lang = {
   },
   // Locale-aware thousands/decimal formatting for money figures.
   money(n) {
-    return Math.round(n).toLocaleString(Lang.current === 'en' ? 'en-US' : 'tr-TR');
+    // Abbreviated (1.5k / 2.3M / 4B / 1.2T) so big numbers stay readable in
+    // tight UI spots; anything under 1000 is shown whole.
+    const sign = n < 0 ? '-' : '';
+    const v = Math.abs(n);
+    const units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'k']];
+    const fmt = (x) => {
+      const dec = x >= 100 ? 0 : (x >= 10 ? 1 : 2);
+      let str = x.toFixed(dec);
+      if (str.includes('.')) str = str.replace(/0+$/, '').replace(/\.$/, '');
+      return Lang.current === 'en' ? str : str.replace('.', ',');
+    };
+    for (let i = 0; i < units.length; i++) {
+      if (v >= units[i][0]) {
+        let u = units[i];
+        // 999.6k would round to "1000k" — promote to the next unit instead
+        if (i > 0 && Number((v / u[0]).toFixed(0)) >= 1000) u = units[i - 1];
+        return sign + fmt(v / u[0]) + u[1];
+      }
+    }
+    return sign + String(Math.round(v));
   },
   set(lang) {
     Lang.current = lang;
@@ -1329,6 +1350,7 @@ const Sites = {
     site.grid = Array.from({ length: site.rows }, () => Array(site.cols).fill(null));
   },
   current() { return State.sites.find(s => s.id === State.currentSiteId); },
+  displayName(site) { return site.kind === 'autoParts' ? Lang.t('autoPartsStationName') : site.name; },
   switchTo(id) {
     if (!State.sites.find(s => s.id === id) || id === State.currentSiteId) return;
     State.currentSiteId = id;
@@ -1348,7 +1370,7 @@ const Sites = {
     const site = Sites.create(`${Lang.t('siteName')} ${State.sites.length + 1}`);
     State.sites.push(site);
     Sites.switchTo(site.id);
-    UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+    UI.toast(`${Sites.displayName(site)} ${Lang.t('toastNewSite')}`);
     SaveSystem.scheduleSave();
   },
   // The Auto Parts Station is a one-time purchase that arrives fully built
@@ -1369,13 +1391,14 @@ const Sites = {
     for (const item of CONFIG.autoPartsStationLayout) {
       const b = Factory.create(item.defId, item.row, item.col);
       if (b.kind === 'belt' && item.dir) b.dir = item.dir;
+      if (b.kind === 'machine' && item.level) b.level = item.level;
       site.grid[item.row][item.col] = b;
       site.buildings.push(b);
     }
     State.sites.push(site);
     State.autoPartsStationPurchased = true;
     Sites.switchTo(site.id);
-    UI.toast(`${site.name} ${Lang.t('toastNewSite')}`);
+    UI.toast(`${Sites.displayName(site)} ${Lang.t('toastNewSite')}`);
     UI.buildShop(); // pistonPress/brakePress are now unlocked in the build shop too
     SaveSystem.scheduleSave();
   },
@@ -1530,6 +1553,7 @@ const Factory = {
   place(defId, row, col, site = Sites.current()) {
     const def = CONFIG.buildables[defId];
     if (!def || !site) return false;
+    if (def.requiresAutoPartsStation && site.kind !== 'autoParts') { UI.toast(Lang.t('toastStationOnly')); return false; }
     if (row < 0 || col < 0 || row >= site.rows || col >= site.cols) return false;
     if (site.grid[row][col]) { UI.toast(Lang.t('toastCellOccupied')); return false; }
     if (!Economy.canAfford(def.cost)) { UI.toast(Lang.t('toastNotEnoughCash')); return false; }
@@ -1550,7 +1574,7 @@ const Factory = {
     const refund = b.sellRefund;
     Economy.earn(refund);
     Factory.remove(b);
-    UI.toast(`${Lang.t('toastSold')}: +$${refund}`);
+    UI.toast(`${Lang.t('toastSold')}: +$${Lang.money(refund)}`);
     UI.refreshInspector();
     SaveSystem.scheduleSave();
   },
@@ -1731,9 +1755,19 @@ const Logistics = {
    MODULE: orders.js — contract generation & fulfillment
    ================================================================ */
 const Orders = {
+  // Only ask for parts the player can actually build right now — otherwise
+  // orders for e.g. Pistons would show up (and expire unfilled) long before
+  // the Auto Parts Station is bought.
+  availablePartTypes() {
+    return Object.keys(CONFIG.parts).filter(partKey =>
+      Object.values(CONFIG.buildables).some(def =>
+        def.kind === 'machine' && def.outputPart === partKey &&
+        (!def.requiresTech || Tech.isUnlocked(def.requiresTech)) &&
+        (!def.requiresAutoPartsStation || State.autoPartsStationPurchased)));
+  },
   spawn() {
     if (State.orders.length >= Tech.maxActiveOrders()) return;
-    const partKeys = Object.keys(CONFIG.parts);
+    const partKeys = Orders.availablePartTypes();
     const partType = partKeys[Math.floor(Math.random() * partKeys.length)];
     const qty = Math.round((3 + Math.floor(Math.random() * 6)) * Tech.orderQtyFactor());
     const base = CONFIG.parts[partType].basePrice;
@@ -1758,7 +1792,7 @@ const Orders = {
     State.stats.totalOrdersCompleted += 1;
     State.stats.totalRevenue += order.reward;
     State.orders = State.orders.filter(o => o.id !== order.id);
-    UI.toast(`${Lang.t('toastOrderDone')}: +$${order.reward}`);
+    UI.toast(`${Lang.t('toastOrderDone')}: +$${Lang.money(order.reward)}`);
     UI.refreshOrders();
     if (!Game.offlineCatchupActive) SaveSystem.scheduleSave();
   },
@@ -2654,7 +2688,6 @@ const UI = {
     document.getElementById('site-tabs').addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
-      if (btn.id === 'btn-new-site') { if (!btn.disabled) Sites.addNew(); return; }
       if (btn.id === 'btn-buy-auto-parts') { if (!btn.disabled) Sites.buyAutoPartsStation(); return; }
       const siteId = btn.dataset.siteId;
       if (siteId) Sites.switchTo(parseInt(siteId, 10));
@@ -2892,7 +2925,7 @@ const UI = {
       return;
     }
     const row = (label, value, color) => `
-      <div class="inv-row"><span>${label}</span><span class="qty" ${color ? `style="color:${color}"` : ''}>$${value.toFixed(0)}</span></div>
+      <div class="inv-row"><span>${label}</span><span class="qty" ${color ? `style="color:${color}"` : ''}>$${Lang.money(value)}</span></div>
     `;
     const ppeRows = Object.entries(CONFIG.expenseRates.ppe).map(([key, def]) => row(Lang.field(def, 'label'), b.ppe[key])).join('');
     el.innerHTML = `
@@ -3017,12 +3050,9 @@ const UI = {
   },
   refreshSiteTabs() {
     const wrap = document.getElementById('site-tabs');
-    const cost = Sites.newSiteCost();
-    const canAddSite = Economy.canAfford(cost);
     let html = State.sites.map(site => `
-      <button class="site-tab ${site.id === State.currentSiteId ? 'active' : ''}" data-site-id="${site.id}">${site.kind === 'autoParts' ? '🚗 ' : ''}${site.name}</button>
+      <button class="site-tab ${site.id === State.currentSiteId ? 'active' : ''}" data-site-id="${site.id}">${site.kind === 'autoParts' ? '🚗 ' : ''}${Sites.displayName(site)}</button>
     `).join('');
-    html += `<button class="site-tab add" id="btn-new-site" ${canAddSite ? '' : 'disabled'}>+ ${Lang.t('newSite')} ($${Lang.money(cost)})</button>`;
     if (!State.autoPartsStationPurchased) {
       const canAffordStation = Economy.canAfford(CONFIG.autoPartsStationCost);
       html += `<button class="site-tab add auto-parts-tab" id="btn-buy-auto-parts" ${canAffordStation ? '' : 'disabled'}>🚗 ${Lang.t('buyAutoPartsStation')} ($${Lang.money(CONFIG.autoPartsStationCost)})</button>`;
@@ -3035,7 +3065,7 @@ const UI = {
     document.getElementById('site-size-tag').textContent = `${site.cols}×${site.rows}`;
     const maxed = Sites.isMaxSize(site);
     const cost = Sites.expandCost(site);
-    document.getElementById('site-info').textContent = `${site.name} ${Lang.t('siteInfoBuildings', { n: site.buildings.length })}`;
+    document.getElementById('site-info').textContent = `${Sites.displayName(site)} ${Lang.t('siteInfoBuildings', { n: site.buildings.length })}`;
     const btn = document.getElementById('btn-expand');
     btn.textContent = maxed ? Lang.t('maxSize') : `${Lang.t('expandSite')} ($${Lang.money(cost)})`;
     btn.disabled = maxed || !Economy.canAfford(cost);
@@ -3066,7 +3096,7 @@ const UI = {
           <div class="name">${Lang.field(def, 'name')}</div>
           <div class="desc">${Lang.field(def, 'desc')}${extra}</div>
         </div>
-        <div class="price">$${def.cost}</div>
+        <div class="price">$${Lang.money(def.cost)}</div>
       `;
       el.addEventListener('click', () => {
         State.buildSelection = (State.buildSelection === def.id) ? null : def.id;
@@ -3095,7 +3125,7 @@ const UI = {
       const qty = State.inventory[key] || 0;
       const unitPrice = Math.round(part.basePrice * CONFIG.bulkSellRatio);
       const bulkBtn = bulkUnlocked
-        ? `<button class="bulk-sell-btn" data-sell="${key}" ${qty <= 0 ? 'disabled' : ''}>${Lang.t('bulkSellBtn')} ($${unitPrice}/${Lang.t('totalProducedRow')})</button>`
+        ? `<button class="bulk-sell-btn" data-sell="${key}" ${qty <= 0 ? 'disabled' : ''}>${Lang.t('bulkSellBtn')} ($${Lang.money(unitPrice)}/${Lang.t('totalProducedRow')})</button>`
         : '';
       return `
         <div class="inv-row">
@@ -3123,7 +3153,7 @@ const UI = {
       const part = CONFIG.parts[o.partType];
       return `
         <div class="order-card" data-order-id="${o.id}">
-          <div class="head"><span class="client">${o.client}</span><span class="reward">+$${o.reward}</span></div>
+          <div class="head"><span class="client">${o.client}</span><span class="reward">+$${Lang.money(o.reward)}</span></div>
           <div class="req">${o.qty}x ${Lang.field(part, 'name')} <span style="color:${canFulfill ? '#4fbf82' : '#8b939c'}">${Lang.t('havingQty', { n: have })}</span></div>
           <div class="timerbar"><div class="fill" style="width:${(remainRatio*100).toFixed(0)}%"></div></div>
           <button ${canFulfill ? '' : 'disabled'}>${canFulfill ? Lang.t('deliver') : Lang.t('notEnoughParts')}</button>
@@ -3169,10 +3199,10 @@ const UI = {
         <div class="insp-row"><span>${Lang.t('wear')}</span><b style="color:${wearColor}">${b.wear.toFixed(0)}%</b></div>
         <div class="insp-wear"><div class="fill" style="width:${b.wear.toFixed(0)}%;background:${wearColor}"></div></div>
         <div class="insp-actions">
-          <button class="repair" id="btn-repair" ${b.wear <= 0 ? 'disabled' : ''}>${b.wear <= 0 ? Lang.t('sound') : `${Lang.t('repairBtn')} $${b.repairCost}`}</button>
-          <button class="upgrade" id="btn-upgrade" ${canUp ? '' : 'disabled'}>${canUp ? `${Lang.t('upgradeBtn')} $${upCost}` : Lang.t('maxLevelBtn')}</button>
+          <button class="repair" id="btn-repair" ${b.wear <= 0 ? 'disabled' : ''}>${b.wear <= 0 ? Lang.t('sound') : `${Lang.t('repairBtn')} $${Lang.money(b.repairCost)}`}</button>
+          <button class="upgrade" id="btn-upgrade" ${canUp ? '' : 'disabled'}>${canUp ? `${Lang.t('upgradeBtn')} $${Lang.money(upCost)}` : Lang.t('maxLevelBtn')}</button>
           <button class="move" id="btn-move">${Lang.t('move')}</button>
-          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${Lang.money(b.sellRefund)})</button>
         </div>
       `;
       document.getElementById('btn-repair').addEventListener('click', () => Factory.repair(b));
@@ -3192,7 +3222,7 @@ const UI = {
         <div class="insp-actions">
           <button class="upgrade" id="btn-rotate">${Lang.t('rotate')}</button>
           <button class="move" id="btn-move">${Lang.t('move')}</button>
-          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${Lang.money(b.sellRefund)})</button>
         </div>
       `;
       document.getElementById('btn-rotate').addEventListener('click', () => { Factory.rotate(b); UI.refreshInspector(); });
@@ -3206,7 +3236,7 @@ const UI = {
         <div class="insp-row"><span>${Lang.t('feedInterval')}</span><b>${(CONFIG.depotFeedMs / 1000).toFixed(1)}s</b></div>
         <div class="insp-actions">
           <button class="move" id="btn-move">${Lang.t('move')}</button>
-          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${Lang.money(b.sellRefund)})</button>
         </div>
       `;
       document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
@@ -3218,7 +3248,7 @@ const UI = {
         <div class="insp-row"><span>${Lang.t('warehouseReceived')}</span><b>${b.totalReceived}</b></div>
         <div class="insp-actions">
           <button class="move" id="btn-move">${Lang.t('move')}</button>
-          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${Lang.money(b.sellRefund)})</button>
         </div>
       `;
       document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
@@ -3233,7 +3263,7 @@ const UI = {
         <div class="insp-row"><span>${Lang.t('techCurrent')}</span><b style="color:${target ? '#c88a4a' : '#8b939c'}">${target ? `${Lang.field(target.def, 'name')} ${Lang.t('repairingWord')}` : Lang.t('techIdle')}</b></div>
         <div class="insp-actions">
           <button class="move" id="btn-move">${Lang.t('move')}</button>
-          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${b.sellRefund})</button>
+          <button class="sell" id="btn-sell">${Lang.t('sell')} ($${Lang.money(b.sellRefund)})</button>
         </div>
       `;
       document.getElementById('btn-move').addEventListener('click', () => Factory.startMove(b));
